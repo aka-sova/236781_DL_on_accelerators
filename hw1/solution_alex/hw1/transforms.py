@@ -29,7 +29,10 @@ class InvertColors(object):
         """
         # TODO: Invert the colors of the input image.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # inverting the colors means pasting the complimentary of the value instead of the value.
+        # to do this we subtract all tensor from 1 for each channel
+        return 1 - x
         # ========================
 
 
@@ -41,7 +44,19 @@ class FlipUpDown(object):
         """
         # TODO: Flip the input image so that up is down.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # regular flipud won't work on 3 dim matrix
+        # we take care of each channel separately
+
+        ch_num = x.shape[0]
+        flipped_x = torch.zeros(x.shape)
+
+        for ch in range(ch_num):
+            ch_data = x[ch, :, :] # 2 dim matrix
+            ch_data_flipped = torch.flipud((ch_data))
+            flipped_x[ch, :, :] = ch_data_flipped
+
+
+        return flipped_x
         # ========================
 
 

@@ -18,15 +18,46 @@ class FirstLastSampler(Sampler):
         """
         super().__init__(data_source)
         self.data_source = data_source
+        self.indices = list(range(0, len(data_source)))
 
     def __iter__(self) -> Iterator[int]:
-        # TODO:
+
         # Implement the logic required for this sampler.
         # If the length of the data source is N, you should return indices in a
         # first-last ordering, i.e. [0, N-1, 1, N-2, ...].
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        self.cur_idx = None
+        self.added_last = None
+        self.last_sample = None
+
+        return self
+
         # ========================
+
+    def __next__(self):
+
+        if self.last_sample == round(len(self.data_source)/2):
+            # stop when reaching middle
+            raise StopIteration
+
+        if self.last_sample is None:
+            self.cur_idx = 0
+            self.added_last = 0
+            self.last_sample = 0
+        else:
+            if self.added_last == 0:
+                self.added_last = 1
+                self.cur_idx += 1
+                self.last_sample = len(self.data_source) - round((self.cur_idx + 1)/2)
+            else:
+                self.added_last = 0
+                self.cur_idx += 1
+                self.last_sample = round(self.cur_idx/2)  # for even indexes
+
+        return self.last_sample
+
+
 
     def __len__(self):
         return len(self.data_source)
@@ -58,7 +89,34 @@ def create_train_validation_loaders(
     #  Hint: you can specify a Sampler class for the `DataLoader` instance
     #  you create.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    val_size = round(validation_ratio * len(dataset))
+
+    # split the dataset from the previously created function
+    # list for train and test
+
+    train_list = list(range(0, round(len(dataset) - val_size)))   # first indices
+    valid_list = list(range(round(len(dataset) - val_size), round(len(dataset))))
+
+    # import datasets
+    # train_dataset = datasets.SubsetDataset(dataset, subset_len=len(dataset) - val_size, offset = 0)
+    # valid_dataset = datasets.SubsetDataset(dataset, subset_len=val_size, offset = val_size)
+
+    train_dataset = torch.utils.data.Subset(dataset, train_list)
+    valid_dataset = torch.utils.data.Subset(dataset, valid_list)
+
+    dl_train = torch.utils.data.DataLoader(dataset = train_dataset, sampler=FirstLastSampler(train_dataset))
+    dl_valid = torch.utils.data.DataLoader(dataset = valid_dataset, sampler=FirstLastSampler(valid_dataset))
+
+    train_idx = (dl_train.sampler.indices)
+    valid_idx = (dl_valid.sampler.indices)
+
+    print(train_idx[0])
+    print(train_idx[-1])
+    print(valid_idx[0])
+    print(valid_idx[-1])
+
+
     # ========================
 
     return dl_train, dl_valid
