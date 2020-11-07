@@ -98,23 +98,16 @@ def create_train_validation_loaders(
     train_list = list(range(0, round(len(dataset) - val_size)))   # first indices
     valid_list = list(range(round(len(dataset) - val_size), round(len(dataset))))
 
-    # import datasets
-    # train_dataset = datasets.SubsetDataset(dataset, subset_len=len(dataset) - val_size, offset = 0)
-    # valid_dataset = datasets.SubsetDataset(dataset, subset_len=val_size, offset = val_size)
-
     train_dataset = torch.utils.data.Subset(dataset, train_list)
     valid_dataset = torch.utils.data.Subset(dataset, valid_list)
 
-    dl_train = torch.utils.data.DataLoader(dataset = train_dataset, sampler=FirstLastSampler(train_dataset))
-    dl_valid = torch.utils.data.DataLoader(dataset = valid_dataset, sampler=FirstLastSampler(valid_dataset))
+
+
+    dl_train = torch.utils.data.DataLoader(dataset = train_dataset, sampler=torch.utils.data.SubsetRandomSampler(train_list))
+    dl_valid = torch.utils.data.DataLoader(dataset = valid_dataset, sampler=torch.utils.data.SubsetRandomSampler(valid_list))
 
     train_idx = (dl_train.sampler.indices)
     valid_idx = (dl_valid.sampler.indices)
-
-    print(train_idx[0])
-    print(train_idx[-1])
-    print(valid_idx[0])
-    print(valid_idx[-1])
 
 
     # ========================
