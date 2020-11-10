@@ -89,9 +89,45 @@ def l2_dist(x1: Tensor, x2: Tensor):
     #    combine the three terms efficiently.
     #  - Don't use torch.cdist
 
-    dists = None
+
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    # l2 = sqrt ( sum  ( x_i^2 - 2*x_i*y_i + y_i^2 ) for all i,j in N1,N2 )
+
+    # to implement it we expand one 2D tensor to a 3rd dimension, duplicating the 2D tensor
+    # length of 3rd dim is N2.  Bringing N1,D -> N1, D, N2
+    # then we use broadcasting to multiply it by rotated 2nd tensor
+    # this gives us x_i * y*i matrix of size N1, D, N2, later multiply by -2
+
+    # we make same matrix for x_i^2 of size N1, D, N2
+    # and matrix for y_i^2 of size N2, D, N1  (which we rotate)
+
+    # then summing over matrixes along D and taking sqrt we get the result of size N1 by N2
+
+    N1, D = x1.shape
+    N2, _ = x2.shape
+
+    # bring x1 to N1, D, N2
+    extended_x1 = torch.zeros(N1, D, 1)
+    extended_x1[:, :, 0] = x1
+    extended_x1 = extended_x1.repeat(1, 1, N2)
+
+    # bring x2 to N1, D, N2
+    extended_x2 = torch.zeros(N2, D, 1)
+    extended_x2[:, :, 0] = x2
+    extended_x2 = extended_x2.repeat(1, 1, N1)
+    extended_x2 = torch.rot90(extended_x2, 1, [0, 2])
+
+    # calculate x_i ^ 2, y_i ^ 2, -2 * x_i * y_i
+    x_i_sqrd = extended_x1 * extended_x1
+    y_i_sqrd = extended_x2 * extended_x2
+    x_i_y_i = extended_x1 * extended_x2
+
+    # sum over the dim = 1, which is D
+    total_tensor = torch.sum((x_i_sqrd + y_i_sqrd - 2*x_i_y_i),1)
+    dists = torch.sqrt(total_tensor)
+
+
     # ========================
 
     return dists
@@ -109,9 +145,14 @@ def accuracy(y: Tensor, y_pred: Tensor):
     assert y.dim() == 1
 
     # TODO: Calculate prediction accuracy. Don't use an explicit loop.
-    accuracy = None
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    y_diff = (y - y_pred)
+    bool_list = list(map(bool,y_diff))  # hope it's not 'explicit loop'
+    false_preds = sum(bool_list)
+
+    accuracy = 1 - (false_preds / y.shape[0])
+
     # ========================
 
     return accuracy
