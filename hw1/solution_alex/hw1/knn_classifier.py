@@ -31,7 +31,19 @@ class KNNClassifier(object):
         #     y_train.
         #  2. Save the number of classes as n_classes.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        x_train_l = []
+        y_train_l = []
+
+
+        for idx, batch in enumerate(dl_train):
+            x_train_l.append(batch[0])
+            y_train_l.append(batch[1])
+
+        x_train = torch.cat(x_train_l, dim=0)
+        y_train = torch.cat(y_train_l, dim=0)
+        n_classes = torch.unique(y_train).shape[0]
+
         # ========================
 
         self.x_train = x_train
@@ -57,13 +69,30 @@ class KNNClassifier(object):
 
         n_test = x_test.shape[0]
         y_pred = torch.zeros(n_test, dtype=torch.int64)
+
         for i in range(n_test):
             # TODO:
             #  - Find indices of k-nearest neighbors of test sample i
             #  - Set y_pred[i] to the most common class among them
             #  - Don't use an explicit loop.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+
+            # taking relevant row from the dist matrix
+            distances = dist_matrix[:, i]
+
+            # sort
+            sorted, indices = torch.sort(distances)
+
+            # cut all beyond K
+            sorted_k = sorted[0:self.k-1]
+            indices_k = indices[0:self.k-1]
+
+            # count most common label. take first if equal number of cases
+            labels = self.y_train[indices_k]
+            counts = torch.bincount(labels)
+
+            y_pred[i] =torch.argmax(counts)
+
             # ========================
 
         return y_pred
