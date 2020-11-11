@@ -73,11 +73,11 @@ class KNNClassifier(object):
             #  - Set y_pred[i] to the most common class among them
             #  - Don't use an explicit loop.
             # ====== YOUR CODE: ======
-            dist_ij=dist_matrix[i].numpy()
+            dist_ij=dist_matrix[:,i].numpy()
             #min distance of sample i in x_train from samples in x_test
-            m=min(dist_ij[i])
-            idx=np.argwhere(dist_ij[i]==m)
-            y_pred[i]=self.y[idx]
+            m=min(dist_ij)
+            idx=np.argwhere(dist_ij==m)
+            y_pred[i]=self.y_train[idx]
             # ========================
 
         return y_pred
