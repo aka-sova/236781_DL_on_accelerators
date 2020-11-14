@@ -100,7 +100,9 @@ class BiasTrickTransformer(BaseEstimator, TransformerMixin):
 
         xb = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        N,D = X.shape
+        bias_arr = np.ones([N, 1])
+        xb = np.hstack((bias_arr, X))
         # ========================
 
         return xb
@@ -163,7 +165,34 @@ def top_correlated_features(df: DataFrame, target_feature, n=5):
     # TODO: Calculate correlations with target and sort features by it
 
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    # pandas has built-in function to calculate the correlation matrix (Pearson coefficients)
+    pearson_c_mx = df.corr(method='pearson')
+
+    # find index of the target feature
+    target_feature_idx = df.columns.get_loc(target_feature)
+
+    # take the row/column of that index in correlation mx
+    pearson_c_mx_np = pearson_c_mx.to_numpy(dtype = float)
+    corrs = pearson_c_mx_np[target_feature_idx, :]
+
+    # sort the correlations (abs values)
+    corrs = [np.abs(x) for x in corrs]
+    corrs_values = np.flip(np.sort(corrs))
+    corrs_indexes = np.flip(np.argsort(corrs))
+
+    # remove the target. assume there's possibility it's not always first
+    top_n_features = []
+    top_n_corr = []
+
+    for val,idx in zip(corrs_values, corrs_indexes):
+        if idx != target_feature_idx:
+            top_n_features.append(idx)
+            top_n_corr.append(val)
+
+    top_n_features = top_n_features[:n]
+    top_n_corr = top_n_corr[:n]
+
     # ========================
 
     return top_n_features, top_n_corr
@@ -179,7 +208,7 @@ def mse_score(y: np.ndarray, y_pred: np.ndarray):
 
     # TODO: Implement MSE using numpy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    mse = np.sum((y-y_pred)**2) * (1/np.shape(y)[0])
     # ========================
     return mse
 
@@ -187,14 +216,25 @@ def mse_score(y: np.ndarray, y_pred: np.ndarray):
 def r2_score(y: np.ndarray, y_pred: np.ndarray):
     """
     Computes R^2 score,
-    :param y: Predictions, shape (N,)
-    :param y_pred: Ground truth labels, shape (N,)
+    :param y: Ground truth labels, shape (N,)
+    :param y_pred: Predictions, shape (N,)
     :return: R^2 score.
     """
 
     # TODO: Implement R^2 using numpy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    ### SKIKIT takes y_true, y_pred
+
+    # here y_pred is Ground truth??? Confusing!! y is ground truth!!
+
+    y_mean = np.mean(y)
+    total_variation = np.sum((y-y_mean)**2)
+
+    explained_variation = np.sum((y-y_pred)**2)
+
+    r2 = 1 - (explained_variation/total_variation)
+
     # ========================
     return r2
 
