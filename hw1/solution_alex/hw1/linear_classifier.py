@@ -23,7 +23,7 @@ class LinearClassifier(object):
 
         self.weights = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.weights = torch.normal(size = (n_features, n_classes), mean=0, std = weight_std)
         # ========================
 
     def predict(self, x: Tensor):
@@ -45,7 +45,9 @@ class LinearClassifier(object):
 
         y_pred, class_scores = None, None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        class_scores = torch.matmul(x, self.weights)  # is NXC
+        y_pred = torch.max(class_scores, 1).indices  # max pred class value for each sample
+
         # ========================
 
         return y_pred, class_scores
@@ -68,7 +70,11 @@ class LinearClassifier(object):
 
         acc = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        y_diff = (y - y_pred)
+        bool_list = list(map(bool, y_diff))
+        false_preds = sum(bool_list)
+
+        acc = 1 - (false_preds / y.shape[0])
         # ========================
 
         return acc * 100
@@ -87,7 +93,7 @@ class LinearClassifier(object):
         train_res = Result(accuracy=[], loss=[])
         valid_res = Result(accuracy=[], loss=[])
 
-        print("Training", end="")
+        print("Training", end="\n")
         for epoch_idx in range(max_epochs):
             total_correct = 0
             average_loss = 0
@@ -104,9 +110,50 @@ class LinearClassifier(object):
             #     using the weight_decay parameter.
 
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            # for batch in dl_train:
+            #     print(batch)
+
+            total_grad = torch.zeros(self.weights.shape)
+            total_loss = 0
+            total_accuracy = 0
+            batches = 0
+
+            for batch in dl_train:
+                # 1 batch = batc_size images and labels
+                X, y = batch
+
+                # 1. evaluate the model
+                y_pred, class_scores = self.predict(X)
+                accuracy = self.evaluate_accuracy(y, y_pred)
+                total_accuracy += accuracy
+
+                # 2. Calculate the loss
+                loss = loss_fn.loss(X, y, class_scores, y_pred)
+                total_loss += loss
+
+                # 3. calculate the gradients for the weights
+                gradients = loss_fn.grad()
+
+                # 4. sum to the total gradients
+                total_grad += gradients
+                batches += 1
+
+            print(f"Epoch : {epoch_idx}, loss : {total_loss / batches}, accuracy : {total_accuracy / batches}")
+            train_res.loss.append(total_loss / batches)
+            train_res.accuracy.append(total_accuracy / batches)
+
+            # 5. make iteration of the weights update.
+            # TODO add weight_decay
+            self.weights -= learn_rate * (total_grad / batches)
+
+
+
+
+
+
+
             # ========================
-            print(".", end="")
+            # print(".", end="")
 
         print("")
         return train_res, valid_res
@@ -138,7 +185,9 @@ def hyperparams():
     #  Manually tune the hyperparameters to get the training accuracy test
     #  to pass.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    hp['learn_rate'] = 0.01
+    hp['weight_std'] = 0.01
+    hp['weight_decay'] = 0.1
     # ========================
 
     return hp

@@ -52,12 +52,41 @@ class SVMHingeLoss(ClassifierLoss):
 
         loss = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # w_j * x_i  -> given in x_scores
+        # w_y_i * x_i -> take the column for the correct class in x_scores, and extend it
+
+        # 1. take all the correct classes scores
+        #       that's best way i found to do it...
+        cor_classes_scores = [(x_score[y_true]) for x_score, y_true in zip(x_scores,y)]
+        cor_classes_scores = torch.Tensor(cor_classes_scores).unsqueeze(0).T # N X 1
+
+        # 2. create the M matrix from the hint - without delta yet
+        M = x_scores - cor_classes_scores + self.delta  # N X D
+
+        # 3. use a stupid loop, later remove it
+        for N in range(M.shape[0]):
+            for D in range(M.shape[1]):
+                if D == (y[N].item()):
+                    # j == y_i
+                    M[N][D] -= self.delta
+
+
+        # use the max operation
+        M_max = torch.max(M, torch.zeros(M.shape)) # N X D
+
+        M_sum = torch.sum(M_max, 1) # N X 1
+        M_sum = M_sum # subtract delta one time for the correct class
+
+        num_samples = x.shape[0]
+        loss = torch.sum(M_sum) / num_samples
+
         # ========================
 
         # TODO: Save what you need for gradient calculation in self.grad_ctx
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.grad_ctx =  (x,y,M)
+
         # ========================
 
         return loss
@@ -74,8 +103,43 @@ class SVMHingeLoss(ClassifierLoss):
         #  it create a matrix G such that X^T * G is the gradient.
 
         grad = None
+        x, y, M = self.grad_ctx
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # M is [NXC] , where N = num features, C = num classes
+        # G is [NXC]
+        # grad is [DXC], where D = num features
+
+        G = torch.ones(M.shape)
+
+        # use simple loop to check that the calculation is correct
+        for N in range(G.shape[0]):
+            # every sample
+
+            # sum_falses = 0
+            for D in range(G.shape[1]):
+                # class prediction
+                if D != (y[N].item()):
+                    # j != y_i
+                    if M[N][D] <= 0:
+                        G[N][D] = 0
+            ## for some reason this implementation fails
+
+            #         else:
+            #             sum_falses += 1
+            # G[N][y[N].item()] = -sum_falses
+
+                else:
+                    # j == y_i
+                    if M[N][D] > 0:
+                        G[N][D] = -1
+                    else:
+                        G[N][D] = 0
+
+        # it works!  Now need to change to broadcasting
+
+        G = G / x.shape[0]
+        grad = torch.matmul(x.T, G)
         # ========================
 
         return grad
