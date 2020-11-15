@@ -198,10 +198,20 @@ class LinearClassifier(object):
         #  The output shape should be (n_classes, C, H, W).
 
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        C, H, W = img_shape
+        if has_bias:
+            weights = self.weights[1:, :]
+        else:
+            weights = self.weights
+
+        n_classes = weights.shape[1]
+        weights = weights.T
+        new_shape = (n_classes, C, H, W)
+        weights_reshaped = weights.view(new_shape)
+
         # ========================
 
-        return w_images
+        return weights_reshaped
 
 
 def hyperparams():
