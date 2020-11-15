@@ -110,13 +110,11 @@ class LinearClassifier(object):
             #     using the weight_decay parameter.
 
             # ====== YOUR CODE: ======
-            # for batch in dl_train:
-            #     print(batch)
 
             total_grad = torch.zeros(self.weights.shape)
-            total_loss = 0
-            total_accuracy = 0
-            batches = 0
+            total_train_loss = 0
+            total_train_accuracy = 0
+            batches_num_train = 0
 
             for batch in dl_train:
                 # 1 batch = batc_size images and labels
@@ -125,27 +123,55 @@ class LinearClassifier(object):
                 # 1. evaluate the model
                 y_pred, class_scores = self.predict(X)
                 accuracy = self.evaluate_accuracy(y, y_pred)
-                total_accuracy += accuracy
+                total_train_accuracy += accuracy
 
                 # 2. Calculate the loss
                 loss = loss_fn.loss(X, y, class_scores, y_pred)
-                total_loss += loss
+                total_train_loss += loss
 
                 # 3. calculate the gradients for the weights
                 gradients = loss_fn.grad()
 
                 # 4. sum to the total gradients
                 total_grad += gradients
-                batches += 1
+                batches_num_train += 1
 
-            print(f"Epoch : {epoch_idx}, loss : {total_loss / batches}, accuracy : {total_accuracy / batches}")
-            train_res.loss.append(total_loss / batches)
-            train_res.accuracy.append(total_accuracy / batches)
+            train_res.loss.append(total_train_loss / batches_num_train)
+            train_res.accuracy.append(total_train_accuracy / batches_num_train)
 
             # 5. make iteration of the weights update.
             # TODO add weight_decay
-            self.weights -= learn_rate * (total_grad / batches)
+            self.weights -= learn_rate * (total_grad / batches_num_train)  + (self.weights * weight_decay)
 
+            # 6. test on the validation set
+            total_val_loss = 0
+            total_val_accuracy = 0
+            batches_num_val = 0
+
+            for batch in dl_valid:
+                # 1 batch = batch_size images and labels
+                X, y = batch
+
+                # 1. evaluate the model
+                y_pred, class_scores = self.predict(X)
+                accuracy = self.evaluate_accuracy(y, y_pred)
+                total_val_accuracy += accuracy
+
+                # 2. Calculate the loss
+                loss = loss_fn.loss(X, y, class_scores, y_pred)
+                total_val_loss += loss
+
+                batches_num_val += 1
+
+
+            valid_res.loss.append(total_val_loss / batches_num_val)
+            valid_res.accuracy.append(total_val_accuracy / batches_num_val)
+
+            print(f"Epoch : {epoch_idx}, "
+                  f"training loss: {round(total_train_loss.item() / batches_num_train, 2)}, "
+                  f"training accuracy: {round(total_train_accuracy / batches_num_train,2)} "
+                  f"validation loss: {round(total_val_loss.item() / batches_num_val, 2)} "
+                  f"validation accuracy: {round(total_val_accuracy / batches_num_val, 2)} ")
 
 
 
@@ -185,9 +211,9 @@ def hyperparams():
     #  Manually tune the hyperparameters to get the training accuracy test
     #  to pass.
     # ====== YOUR CODE: ======
-    hp['learn_rate'] = 0.01
-    hp['weight_std'] = 0.01
-    hp['weight_decay'] = 0.1
+    hp['learn_rate'] = 0.01 # 0.008
+    hp['weight_std'] = 0.001
+    hp['weight_decay'] = 0.001
     # ========================
 
     return hp

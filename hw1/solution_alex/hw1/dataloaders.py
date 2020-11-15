@@ -95,26 +95,17 @@ def create_train_validation_loaders(
     # split the dataset from the previously created function
     # list for train and test
 
-    train_list = list(range(0, round(len(dataset) - val_size)))   # first indices
-    valid_list = list(range(round(len(dataset) - val_size), round(len(dataset))))
+    train_list_sampler = list(range(0, round(len(dataset) - val_size)))                     # 0-40000
+    valid_list_sampler = list(range(round(len(dataset) - val_size), round(len(dataset))))   # 40001 - 50000
 
-    train_dataset = torch.utils.data.Subset(dataset, train_list)
-    valid_dataset = torch.utils.data.Subset(dataset, valid_list)
-
-
-
-    dl_train = torch.utils.data.DataLoader(dataset = train_dataset,
-                                           sampler=torch.utils.data.SubsetRandomSampler(train_list),
+    dl_train = torch.utils.data.DataLoader(dataset = dataset,
+                                           sampler=torch.utils.data.SubsetRandomSampler(train_list_sampler),
                                            batch_size=batch_size,
                                            num_workers=num_workers)
-    dl_valid = torch.utils.data.DataLoader(dataset = valid_dataset,
-                                           sampler=torch.utils.data.SubsetRandomSampler(valid_list),
+    dl_valid = torch.utils.data.DataLoader(dataset = dataset,
+                                           sampler=torch.utils.data.SubsetRandomSampler(valid_list_sampler),
                                            batch_size=batch_size,
                                            num_workers=num_workers)
-
-    train_idx = (dl_train.sampler.indices)
-    valid_idx = (dl_valid.sampler.indices)
-
 
     # ========================
 

@@ -57,29 +57,22 @@ class SVMHingeLoss(ClassifierLoss):
         # w_y_i * x_i -> take the column for the correct class in x_scores, and extend it
 
         # 1. take all the correct classes scores
-        #       that's best way i found to do it...
-        cor_classes_scores = [(x_score[y_true]) for x_score, y_true in zip(x_scores,y)]
-        cor_classes_scores = torch.Tensor(cor_classes_scores).unsqueeze(0).T # N X 1
+        cor_classes_scores = x_scores[torch.arange(x_scores.shape[0]), y]
+        cor_classes_scores = cor_classes_scores.unsqueeze(0).T
 
-        # 2. create the M matrix from the hint - without delta yet
+        # 2. create the M matrix from the hint
         M = x_scores - cor_classes_scores + self.delta  # N X D
 
-        # 3. use a stupid loop, later remove it
-        for N in range(M.shape[0]):
-            for D in range(M.shape[1]):
-                if D == (y[N].item()):
-                    # j == y_i
-                    M[N][D] -= self.delta
+        # 3. set the true labels items to 0
+        M[torch.arange(M.shape[0]), y] = 0
 
 
         # use the max operation
         M_max = torch.max(M, torch.zeros(M.shape)) # N X D
 
-        M_sum = torch.sum(M_max, 1) # N X 1
-        M_sum = M_sum # subtract delta one time for the correct class
+        M_sum = torch.sum(M_max, dim=1) # N X 1
 
-        num_samples = x.shape[0]
-        loss = torch.sum(M_sum) / num_samples
+        loss = torch.sum(M_sum) / M.shape[0]
 
         # ========================
 
@@ -105,40 +98,21 @@ class SVMHingeLoss(ClassifierLoss):
         grad = None
         x, y, M = self.grad_ctx
         # ====== YOUR CODE: ======
-
+        # x is [NXD]
         # M is [NXC] , where N = num features, C = num classes
         # G is [NXC]
         # grad is [DXC], where D = num features
 
-        G = torch.ones(M.shape)
+        G_ones = torch.ones(M.shape)
+        G_zeros = torch.zeros(M.shape)
 
-        # use simple loop to check that the calculation is correct
-        for N in range(G.shape[0]):
-            # every sample
+        G = torch.where(M > 0, G_ones, G_zeros)
 
-            # sum_falses = 0
-            for D in range(G.shape[1]):
-                # class prediction
-                if D != (y[N].item()):
-                    # j != y_i
-                    if M[N][D] <= 0:
-                        G[N][D] = 0
-            ## for some reason this implementation fails
+        M_new = torch.where(M > 0, G_ones, G_zeros)
 
-            #         else:
-            #             sum_falses += 1
-            # G[N][y[N].item()] = -sum_falses
+        G[torch.arange(M.shape[0]), y] = -torch.sum(M_new, dim=1)  # for j = y_i
 
-                else:
-                    # j == y_i
-                    if M[N][D] > 0:
-                        G[N][D] = -1
-                    else:
-                        G[N][D] = 0
-
-        # it works!  Now need to change to broadcasting
-
-        G = G / x.shape[0]
+        G = G / x.shape[0] # G/N
         grad = torch.matmul(x.T, G)
         # ========================
 
