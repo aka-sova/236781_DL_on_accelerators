@@ -32,15 +32,14 @@ class KNNClassifier(object):
         #  2. Save the number of classes as n_classes.
         # ====== YOUR CODE: ======
         for x,y in dl_train:
-
-            #initiating condition
-            if self.x_train is None:
-                x_train=x
-                y_train=y
-                n_classes=len(y)
-                continue
-            x_train = torch.cat((x_train,x))
-            y_train = torch.cat((y_train,y))
+            for x,y in enumerate(dl_train):
+              if x==0:
+                 x_train=y[0]
+                 y_train=y[1]
+             else:
+                 x_train = torch.cat((x_train,y[0]))
+                 y_train = torch.cat((y_train,y[1]))
+        n_classes = len(y_train.unique())
 
         # ========================
 
@@ -160,7 +159,22 @@ def find_best_k(ds_train: Dataset, k_choices, num_folds):
         #  random split each iteration), or implement something else.
 
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        accuracies_k = []
+        #creating different data split into training and validation set
+        folds = [round(j * len(ds_train) / num_folds) for j in range(num_folds + 1)]
+        for j in range(num_folds):
+            train_inds = torch.cat((torch.tensor(range(folds[0], folds[j]), dtype=int),
+                                    torch.tensor(range(folds[j + 1], folds[-1]), dtype=int)))
+            test_inds = torch.tensor(range(folds[j], folds[j + 1]), dtype=int)
+            dl_train = DataLoader(ds_train,sampler=torch.utils.data.SubsetRandomSampler(train_inds))
+            dl_test = DataLoader(ds_train,sampler=torch.utils.data.SubsetRandomSampler(test_inds))
+
+            model.train(dl_train)
+            x_test, y_test = dataloader_utils.flatten(dl_test)
+            y_pred = model.predict(x_test)
+            accuracies_k.append(accuracy(y_pred, y_test))
+
+        accuracies.append(accuracies_k)
         # ========================
 
     best_k_idx = np.argmax([np.mean(acc) for acc in accuracies])
