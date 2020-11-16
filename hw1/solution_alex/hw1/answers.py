@@ -38,28 +38,33 @@ to display the full spectrum of the input data that the model may encounter.
 # Part 2 answers
 
 part2_q1 = r"""
-**Your answer:**
+**Answer:**
+Choosing the correct K value for the KNN algorithm hugely depends on the dataset that we
+want to classify. 
+
+Choosing large K values will help to generalize, and reduce the variance due to the noisy data.
+But with large K values we may miss some small classes which are represented with less amount of samples in the 
+dataset, then some class with has similar features, but represented with a bigger amount of samples.
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+Choosing small K value would lead to a big influence of the noise on the inference.
+
 
 """
 
 part2_q2 = r"""
-**Your answer:**
+**Answer:**
 
+1. Choosing a model with respect to the training set accuracy would be wrong. Training set accuracy
+is valid for the in-sample Set, and doesn't reflect the accuracy on the Complete dataset (the Expected accuracy).
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+2. The difference of this method and K-fold CV is that the best model is chosen with regards to the test set, while
+in the K-fold CV the best model is chosen with regard to the average validation error.
+Using the method from the K-fold CV is better:
+- eventually, all samples are used for both training and validation
+- it gives a good estimation on the true error since it uses averaging over all 'folds'
+- we check how well the model generalizes on the unseen data by eventually using all the dataset as the validation
+dataset (by folds)
 
 """
 
