@@ -31,16 +31,14 @@ class KNNClassifier(object):
         #     y_train.
         #  2. Save the number of classes as n_classes.
         # ====== YOUR CODE: ======
-        for x,y in dl_train:
-            for x,y in enumerate(dl_train):
-                if x==0:
-                    x_train=y[0]
-                    y_train=y[1]
-                else:
-                    x_train = torch.cat((x_train,y[0]))
-                    y_train = torch.cat((y_train,y[1]))
+        for idx,val in enumerate(dl_train):
+            if idx==0:
+                x_train=val[0]
+                y_train=val[1]
+            if idx!=0:
+                x_train = torch.cat((x_train,val[0]))
+                y_train = torch.cat((y_train,val[1]))
         n_classes = len(y_train.unique())
-
         # ========================
 
         self.x_train = x_train
@@ -57,13 +55,11 @@ class KNNClassifier(object):
 
         # Calculate distances between training and test samples
         dist_matrix = l2_dist(self.x_train, x_test)
-
         # TODO:
         #  Implement k-NN class prediction based on distance matrix.
         #  For each training sample we'll look for it's k-nearest neighbors.
         #  Then we'll predict the label of that sample to be the majority
         #  label of it's nearest neighbors.
-
         n_test = x_test.shape[0]
         y_pred = torch.zeros(n_test, dtype=torch.int64)
         for i in range(n_test):
@@ -72,11 +68,13 @@ class KNNClassifier(object):
             #  - Set y_pred[i] to the most common class among them
             #  - Don't use an explicit loop.
             # ====== YOUR CODE: ======
-            dist_ij=dist_matrix[:,i].numpy()
+            _, min_inds = torch.topk(-dist_matrix[:, i], self.k)
+            y_pred[i], _ = self.y_train[min_inds].mode()
+            #dist_ij=dist_matrix[:,i].numpy()
             #min distance of sample i in x_train from samples in x_test
-            m=min(dist_ij)
-            idx=np.argwhere(dist_ij==m)
-            y_pred[i]=self.y_train[idx]
+            #m=min(dist_ij)
+            #idx=np.argwhere(dist_ij==m)
+            #y_pred[i]=self.y_train[idx]
             # ========================
 
         return y_pred
@@ -159,6 +157,7 @@ def find_best_k(ds_train: Dataset, k_choices, num_folds):
         #  random split each iteration), or implement something else.
 
         # ====== YOUR CODE: ======
+
         accuracies_k = []
         #creating different data split into training and validation set
         folds = [round(j * len(ds_train) / num_folds) for j in range(num_folds + 1)]
