@@ -31,18 +31,15 @@ class KNNClassifier(object):
         #     y_train.
         #  2. Save the number of classes as n_classes.
         # ====== YOUR CODE: ======
-
-        x_train_l = []
-        y_train_l = []
-
-
-        for idx, batch in enumerate(dl_train):
-            x_train_l.append(batch[0])
-            y_train_l.append(batch[1])
-
-        x_train = torch.cat(x_train_l, dim=0)
-        y_train = torch.cat(y_train_l, dim=0)
-        n_classes = torch.unique(y_train).shape[0]
+        for x,y in dl_train:
+            for x,y in enumerate(dl_train):
+                if x==0:
+                    x_train=y[0]
+                    y_train=y[1]
+                else:
+                    x_train = torch.cat((x_train,y[0]))
+                    y_train = torch.cat((y_train,y[1]))
+        n_classes = len(y_train.unique())
 
         # ========================
 
@@ -69,30 +66,17 @@ class KNNClassifier(object):
 
         n_test = x_test.shape[0]
         y_pred = torch.zeros(n_test, dtype=torch.int64)
-
         for i in range(n_test):
             # TODO:
             #  - Find indices of k-nearest neighbors of test sample i
             #  - Set y_pred[i] to the most common class among them
             #  - Don't use an explicit loop.
             # ====== YOUR CODE: ======
-
-            # taking relevant row from the dist matrix
-            distances = dist_matrix[:, i]
-
-            # sort
-            sorted, indices = torch.sort(distances)
-
-            # cut all beyond K
-            sorted_k = sorted[0:self.k-1]
-            indices_k = indices[0:self.k-1]
-
-            # count most common label. take first if equal number of cases
-            labels = self.y_train[indices_k]
-            counts = torch.bincount(labels)
-
-            y_pred[i] =torch.argmax(counts)
-
+            dist_ij=dist_matrix[:,i].numpy()
+            #min distance of sample i in x_train from samples in x_test
+            m=min(dist_ij)
+            idx=np.argwhere(dist_ij==m)
+            y_pred[i]=self.y_train[idx]
             # ========================
 
         return y_pred
@@ -118,45 +102,11 @@ def l2_dist(x1: Tensor, x2: Tensor):
     #    combine the three terms efficiently.
     #  - Don't use torch.cdist
 
-
     # ====== YOUR CODE: ======
-
-    # l2 = sqrt ( sum  ( x_i^2 - 2*x_i*y_i + y_i^2 ) for all i,j in N1,N2 )
-
-    # to implement it we expand one 2D tensor to a 3rd dimension, duplicating the 2D tensor
-    # length of 3rd dim is N2.  Bringing N1,D -> N1, D, N2
-    # then we use broadcasting to multiply it by rotated 2nd tensor
-    # this gives us x_i * y*i matrix of size N1, D, N2, later multiply by -2
-
-    # we make same matrix for x_i^2 of size N1, D, N2
-    # and matrix for y_i^2 of size N2, D, N1  (which we rotate)
-
-    # then summing over matrixes along D and taking sqrt we get the result of size N1 by N2
-
-    N1, D = x1.shape
-    N2, _ = x2.shape
-
-    # bring x1 to N1, D, N2
-    extended_x1 = torch.zeros(N1, D, 1)
-    extended_x1[:, :, 0] = x1
-    extended_x1 = extended_x1.repeat(1, 1, N2)
-
-    # bring x2 to N1, D, N2
-    extended_x2 = torch.zeros(N2, D, 1)
-    extended_x2[:, :, 0] = x2
-    extended_x2 = extended_x2.repeat(1, 1, N1)
-    extended_x2 = torch.rot90(extended_x2, 1, [0, 2])
-
-    # calculate x_i ^ 2, y_i ^ 2, -2 * x_i * y_i
-    x_i_sqrd = extended_x1 * extended_x1
-    y_i_sqrd = extended_x2 * extended_x2
-    x_i_y_i = extended_x1 * extended_x2
-
-    # sum over the dim = 1, which is D
-    total_tensor = torch.sum((x_i_sqrd + y_i_sqrd - 2*x_i_y_i),1)
-    dists = torch.sqrt(total_tensor)
-
-
+    x1_norm = (x1**2).sum(1).view(-1,1)
+    x2_norm = (x2**2).sum(1).view(1,-1)
+    x1x2 = 2 * torch.mm(x1, torch.transpose(x2, 0, 1))
+    dists = torch.sqrt(x1_norm + x2_norm - x1x2)
     # ========================
 
     return dists
@@ -174,14 +124,11 @@ def accuracy(y: Tensor, y_pred: Tensor):
     assert y.dim() == 1
 
     # TODO: Calculate prediction accuracy. Don't use an explicit loop.
+
     # ====== YOUR CODE: ======
-
-    y_diff = (y - y_pred)
-    bool_list = list(map(bool,y_diff))  # hope it's not 'explicit loop'
-    false_preds = sum(bool_list)
-
-    accuracy = 1 - (false_preds / y.shape[0])
-
+    comparison=y==y_pred
+    comparison=comparison*1 #converting boolean to numbers
+    accuracy=int(torch.sum(comparison))/len(y)
     # ========================
 
     return accuracy
@@ -212,7 +159,22 @@ def find_best_k(ds_train: Dataset, k_choices, num_folds):
         #  random split each iteration), or implement something else.
 
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        accuracies_k = []
+        #creating different data split into training and validation set
+        folds = [round(j * len(ds_train) / num_folds) for j in range(num_folds + 1)]
+        for j in range(num_folds):
+            train_inds = torch.cat((torch.tensor(range(folds[0], folds[j]), dtype=int),
+                                    torch.tensor(range(folds[j + 1], folds[-1]), dtype=int)))
+            test_inds = torch.tensor(range(folds[j], folds[j + 1]), dtype=int)
+            dl_train = DataLoader(ds_train,sampler=torch.utils.data.SubsetRandomSampler(train_inds))
+            dl_test = DataLoader(ds_train,sampler=torch.utils.data.SubsetRandomSampler(test_inds))
+
+            model.train(dl_train)
+            x_test, y_test = dataloader_utils.flatten(dl_test)
+            y_pred = model.predict(x_test)
+            accuracies_k.append(accuracy(y_pred, y_test))
+
+        accuracies.append(accuracies_k)
         # ========================
 
     best_k_idx = np.argmax([np.mean(acc) for acc in accuracies])

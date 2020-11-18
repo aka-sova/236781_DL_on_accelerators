@@ -12,10 +12,12 @@ part1_q1 = r"""
 **Answer:**
 
 1. The test set allows us to estimate the Expected loss (and not in-sample loss). We asses how
-well the model is generalized to the whole set of inputs.
+well the model is generalized to the whole set of inputs. A test set enables us to test our model after we finished training it and it will give us an estimation how
+our model will preform in real conditions.
 
 2. The test set is independent of the training set. It should represent the variety of
-outputs which the model should learn to generalize upon.
+outputs which the model should learn to generalize upon. Test set will be chosen from our dataset, 
+percentage of the test set and how we choose it can be modified.
 
 3. The test set is used in the performance evaluation of the model.
 On others:
@@ -42,12 +44,24 @@ part2_q1 = r"""
 Choosing the correct K value for the KNN algorithm hugely depends on the dataset that we
 want to classify. 
 
-Choosing large K values will help to generalize, and reduce the variance due to the noisy data.
+When k=1  0 classification errors occurs during training set, because we use the single observation to classify itself. 
+Our predictions become less stable since only one point in the training set will predict the label thus,
+generalization error increases for very low K values.
+
+Choosing small K value would lead to a big influence of the noise on the inference.
+
+
+On the other hand as we increase the value of K, our predictions become more stable due to
+majority voting, and thus, more likely to make more accurate predictions (up to an
+optimal point). When we increase K above the optimal point, large number of data
+points from the training set are used for prediction of the unseen data. This increases
+generalization error and the accuracy reduces.
+
 But with large K values we may miss some small classes which are represented with less amount of samples in the 
 dataset, then some class with has similar features, but represented with a bigger amount of samples.
 
 
-Choosing small K value would lead to a big influence of the noise on the inference.
+
 
 
 """
@@ -132,41 +146,34 @@ increasing, when the number of epochs (30) ends. We would train for some more ep
 # Part 4 answers
 
 part4_q1 = r"""
-**Your answer:**
+**Answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The ideal pattern to see in a residual plot is a constant behavior of the error, centered around 0 and.
+From the plots we can see that the fitness of the trained model improves for top-5-features improves after CV, error margin decrease
+and the error points are concentrated around error value 0 in comparison to before we CV where they were more distributed.
 
 """
 
 part4_q2 = r"""
-**Your answer:**
+**Answer:**
+1.Our model is still a linear regression model because feature engineering allows us to reformulate non-linear 
+connection/problems in our data problems to linear problems by adding a feature  to our feature vector,
+thus expecting that our linear regression model to preform better.
+2.we can not fit every non linear function of the original feature because it must be a proper inner product.
+3.Adding a non linear feature increase the dimension of the decision boundary, thus the boundary is still a hyperplane
+in a higher dimension, and it will enable a better separation of the data than we would have without the non linear feature
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
 
 """
 
 part4_q3 = r"""
-**Your answer:**
+**Answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+lambda was set using logspace instead of linspace because we want to search the best order of magnitude
+that will produce the best parameters. 
+Since lambda is used to penalize the parameters' magnitude, small changes in lambda will insure insignificant changes 
+in the parameters' sizes. Therefore using values that are close is a waste of time while searching among different orders 
+of magnitude is more efficient for this hyperparameter.
 
 """
 

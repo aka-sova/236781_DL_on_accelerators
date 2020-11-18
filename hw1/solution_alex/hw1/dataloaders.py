@@ -64,7 +64,7 @@ class FirstLastSampler(Sampler):
 
 
 def create_train_validation_loaders(
-    dataset: Dataset, validation_ratio, batch_size=100, num_workers=0
+    dataset: Dataset, validation_ratio, batch_size=100, num_workers=2
 ):
     """
     Splits a dataset into a train and validation set, returning a

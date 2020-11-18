@@ -16,18 +16,11 @@ def random_labelled_image(shape: Tuple[int, ...], num_classes: int, low=0, high=
     :return: A tuple containing the generated image tensor and it's label.
     """
 
-    # 1. generate the random uniform img in scale [0,1]
-    image = torch.rand(shape)
-
-    # 2. rescale in [low, high] margins and convert to dtype
-    image = (image * high) + low
-    image = image.to(dtype)
-
-    # 3. create random label
-    label = torch.randint(low=0, high=num_classes, size=(1,)).item()
-
+    label = torch.randint(0,num_classes-1,(1,))
+    image = torch.randint(low,high,shape)
     # ========================
-    return image, label
+    return image, label.item()
+
 
 
 @contextmanager
