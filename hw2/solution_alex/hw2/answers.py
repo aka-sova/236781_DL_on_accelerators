@@ -11,13 +11,15 @@ math (delimited with $$).
 part1_q1 = r"""
 **Your answer:**
 
+Input tensor X is 128 X 1024
+Hidden layer tensor size is 1024 X 2048
+Output tensor size is 128 X 2048. 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The Jacobian of the output tensor w.r.t. a single input is 1024 X 2048. 
+ The Jacobian of the output tensor w.r.t. a batch of 128 inputs is 1024 X 2048 X 128 
+
+The amount of memory required to store 1 int is 4 bytes, thus is it required 1024 X 2048 X 128 X 4 ~= 1.073 GB
+
 
 """
 
