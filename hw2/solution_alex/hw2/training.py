@@ -232,7 +232,32 @@ class TorchTrainer(Trainer):
         #  - Optimize params
         #  - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # 1. get prediction
+        y_pred = self.model(X)
+
+        # 2. compute the loss
+        loss = self.loss_fn(y_pred, y)
+
+        # 3. backward pass
+        self.optimizer.zero_grad()
+        loss.backward()
+
+        #. 4. update weights
+        self.optimizer.step()
+
+        # 5. calculate correct values
+        #       y       [N]
+        #       y_pred  [N, num_classes]
+
+        # print(f"y = {y}")
+        # print(f"y_pred = {y_pred}")
+        highest_y = torch.argmax(y_pred, dim=1)
+        true_y = highest_y == y
+        num_correct = torch.sum(true_y)
+
+
+
         # ========================
 
         return BatchResult(loss, num_correct)

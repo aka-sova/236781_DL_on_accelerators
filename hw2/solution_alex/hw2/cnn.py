@@ -77,7 +77,106 @@ class ConvClassifier(nn.Module):
         #  Note: If N is not divisible by P, then N mod P additional
         #  CONV->ACTs should exist at the end, without a POOL after them.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        P = self.pool_every
+        N = len(self.channels)
+        M = self.hidden_dims
+
+        # update the dimensions along while adding the layers
+        curr_h = in_h
+        curr_w = in_w
+
+        # print(in_channels, in_h, in_w)
+
+
+        conv_act_pool_num = round(N/P)-1 if N % P != 0 else round(N/P)
+
+        def add_activation_function(layers_in, activation_type,  **activation_params):
+            if activation_type == 'relu':
+                layers_in.append(nn.ReLU(**self.activation_params))
+            else:
+                layers_in.append(nn.LeakyReLU(**self.activation_params))
+            return layers_in
+
+        def add_pool_function(layers_in, pooling_type, **pooling_params):
+            if pooling_type == 'max':
+                layers_in.append(nn.MaxPool2d(**pooling_params))
+            else:
+                layers_in.append(nn.AvgPool2d(**pooling_params))
+            return layers_in
+
+        def update_size_filter(input_size, dim, last_filter):
+            # after filter, size changes:
+            #   size_out = ((size_in +2*padding - (dilation * (kernel_size - 1)) -1 ) / stride) +1
+
+            # dilation = 1 for all our cases, so:
+            #   size_out = (size_in +2*padding - ( kernel_size-1 ) -1 ) / stride) + 1
+
+            if type(last_filter) == torch.nn.modules.pooling.MaxPool2d:
+                padding = last_filter.padding
+                dilation = last_filter.dilation
+                kernel_size = last_filter.kernel_size
+                stride = last_filter.stride
+            elif type(last_filter) == torch.nn.modules.pooling.AvgPool2d:
+                padding = last_filter.padding
+                dilation = 1
+                kernel_size = last_filter.kernel_size
+                stride = last_filter.stride
+            else :
+                padding = last_filter.padding[dim]
+                dilation = last_filter.dilation[dim]
+                kernel_size = last_filter.kernel_size[dim]
+                stride = last_filter.stride[dim]
+
+            return int(((input_size + 2*padding - (dilation * (kernel_size - 1)) - 1) / stride) + 1)
+
+
+
+
+        # first layer
+        layers.append(nn.Conv2d(in_channels, self.channels[0], **self.conv_params))
+        curr_h = update_size_filter(curr_h, 0, layers[-1])
+        curr_w = update_size_filter(curr_w, 1, layers[-1])
+
+        layers = add_activation_function(layers, self.activation_type, **self.activation_params)
+        curr_p = 1 # already added 1 layer
+
+        #print(f"layer size {curr_h}")
+
+        for i in range(conv_act_pool_num):
+
+            # CONV -> ACT
+            while curr_p != P:
+                layers.append(nn.Conv2d(self.channels[i], self.channels[i+1], **self.conv_params))
+                curr_p += 1
+                curr_h = update_size_filter(curr_h, 0, layers[-1])
+                curr_w = update_size_filter(curr_w, 1, layers[-1])
+                #print(f"layer size {curr_h}")
+
+                layers = add_activation_function(layers, self.activation_type, **self.activation_params)
+
+            curr_p = 0
+            # POOL
+            layers = add_pool_function(layers, self.pooling_type, **self.pooling_params)
+            curr_h = update_size_filter(curr_h, 0, layers[-1])
+            curr_w = update_size_filter(curr_w, 1, layers[-1])
+            #print(f"layer size {curr_h}")
+
+
+        # check if need conv layer without pool
+        if N % P > 0:
+            init_i = round(N / P) - 1
+
+            for i in range((N % P)-1):
+                layers.append(nn.Conv2d(self.channels[init_i+i], self.channels[init_i+i+1], **self.conv_params))
+                curr_h = update_size_filter(curr_h, 0, layers[-1])
+                curr_w = update_size_filter(curr_w, 1, layers[-1])
+                #print(f"layer size {curr_h}")
+                layers = add_activation_function(layers, self.activation_type, **self.activation_params)
+
+        self.classified_input_size = int(curr_h), int(curr_w)
+
+
 
         # ========================
         seq = nn.Sequential(*layers)
@@ -91,7 +190,38 @@ class ConvClassifier(nn.Module):
         #  the first linear layer.
         #  The last Linear layer should have an output dim of out_classes.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        in_channels, in_h, in_w, = tuple(self.in_size)
+
+        input_h, input_w = tuple(self.classified_input_size)
+
+        P = self.pool_every
+        N = len(self.channels)
+        M = self.hidden_dims
+        conv_act_pool_num = round(N / P) - 1 if N % P != 0 else round(N / P)
+
+        def add_activation_function(layers_in, activation_type,  **activation_params):
+            if activation_type == 'relu':
+                layers_in.append(nn.ReLU(**self.activation_params))
+            else:
+                layers_in.append(nn.LeakyReLU(**self.activation_params))
+            return layers_in
+
+        # add the FCNs
+        last_cnn_out_c = self.channels[-1]
+
+        # print(f"input params: w: {input_w}, h : {input_h}, c: {last_cnn_out_c}")
+        last_cnn_params_n = input_w * input_h * last_cnn_out_c
+
+
+        layers.append(nn.Linear(last_cnn_params_n, self.hidden_dims[0]))
+        layers = add_activation_function(layers, self.activation_type, **self.activation_params)
+
+        for i in range(len(M)-1):
+            layers.append(nn.Linear(self.hidden_dims[i], self.hidden_dims[i+1]))
+            layers = add_activation_function(layers, self.activation_type, **self.activation_params)
+
+        # last layer - connect to the output features amount
+        layers.append(nn.Linear(self.hidden_dims[-1], self.out_classes))
         # ========================
         seq = nn.Sequential(*layers)
         return seq
@@ -101,7 +231,10 @@ class ConvClassifier(nn.Module):
         #  Extract features from the input, run the classifier on them and
         #  return class scores.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        features = self.feature_extractor(x)
+        features = features.view(features.shape[0], -1)
+        classification = self.classifier(features)
+        out = classification
         # ========================
         return out
 
@@ -222,6 +355,6 @@ class YourCodeNet(ConvClassifier):
     #  For example, add batchnorm, dropout, skip connections, change conv
     #  filter sizes etc.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
 
     # ========================
