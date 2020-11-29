@@ -72,7 +72,8 @@ class VanillaSGD(Optimizer):
             #  Update the gradient according to regularization and then
             #  update the parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            grad_update = self.learn_rate*dp+0.5*self.reg*p
+            p.data.sub_(grad_update)
             # ========================
 
 
@@ -91,7 +92,12 @@ class MomentumSGD(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.momenta = []
+        for p, dp in self.params:
+            self.momenta.append(torch.zeros(dp.shape) if dp.dim() > 0 else torch.tensor(1.0))
+        self.momenta_iter = 0
+        self.momenta_finish = len(self.momenta)
+
         # ========================
 
     def step(self):
@@ -103,7 +109,17 @@ class MomentumSGD(Optimizer):
             # update the parameters tensor based on the velocity. Don't forget
             # to include the regularization term.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            # Momentum update: v_t+1=mu*v_t-eta*dp
+            self.momenta[self.momenta_iter].mul_(self.momentum)
+            self.momenta[self.momenta_iter].sub_(self.learn_rate*dp)
+            # Parameter update
+            update_rule = self.momenta[self.momenta_iter] + 0.5*self.reg*p
+            p.data.add_(update_rule)
+            # Momenta iterator update
+            self.momenta_iter += 1
+            if self.momenta_iter == self.momenta_finish:
+                self.momenta_iter= 0
+
             # ========================
 
 
@@ -124,7 +140,11 @@ class RMSProp(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.rms_prop = []
+        for p, dp in self.params:
+            self.rms_prop.append(torch.zeros(dp.shape) if dp.dim() > 0 else torch.tensor(1.0))
+        self.rms_prop_iter = 0
+        self.rms_prop_finish = len(self.rms_prop)
         # ========================
 
     def step(self):
@@ -137,5 +157,15 @@ class RMSProp(Optimizer):
             # average of it's previous gradients. Use it to update the
             # parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            # RMSprop update: r_t+1 = gamma*r_t +(1-gamma)*dp^2
+            self.rms_prop[self.rms_prop_iter].mul_(self.decay)
+            self.rms_prop[self.rms_prop_iter].add_((1 - self.decay) * dp ** 2)
+            # Parameter update
+            factor = self.learn_rate / (self.rms_prop[self.rms_prop_iter] + self.eps) ** 0.5
+            update_rule = factor * dp
+            p.data.sub_(update_rule)
+
+            self.rms_prop_iter += 1
+            if self.rms_prop_iter == self.rms_prop_finish:
+                self.rms_prop_iter= 0
             # ========================
