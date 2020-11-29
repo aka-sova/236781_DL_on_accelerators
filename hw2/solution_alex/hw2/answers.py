@@ -18,7 +18,7 @@ Output tensor size is 128 X 2048.
 The Jacobian of the output tensor w.r.t. a single input is 1024 X 2048. 
  The Jacobian of the output tensor w.r.t. a batch of 128 inputs is 1024 X 2048 X 128 
 
-The amount of memory required to store 1 int is 4 bytes, thus is it required 1024 X 2048 X 128 X 4 ~= 1.073 GB
+The amount of memory required to store 1 int is 4 bytes, thus is it required 1024 X 2048 X 128 X 4 [bytes] ~= 1.073 [GB]
 
 
 """
