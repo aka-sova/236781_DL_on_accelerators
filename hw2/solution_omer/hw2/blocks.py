@@ -388,7 +388,18 @@ class Dropout(Block):
         #  Notice that contrary to previous blocks, this block behaves
         #  differently a according to the current training_mode (train/test).
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        out = x
+        N = x.shape[1]
+        D = N * self.p
+        # print(out.shape)
+        self.dDrop = torch.ones(out.shape)
+        if self.training_mode:
+            for ii, i in enumerate(out):
+                # print(i.shape)
+                inds = torch.randperm(out.shape[1])
+                # print(inds.shape)
+                i[inds[:int(D)]].mul_(0)
+                self.dDrop[ii, inds[:int(D)]].mul_(0)
         # ========================
 
         return out
@@ -396,7 +407,14 @@ class Dropout(Block):
     def backward(self, dout):
         # TODO: Implement the dropout backward pass.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if torch.isnan(dout).any():
+            raise ValueError('Gradients must not be nan')
+        if self.training_mode:
+            dx = dout * self.dDrop
+        else:
+            dx = dout
+        if torch.isnan(dx).any():
+            raise ValueError('Failed to derivate')
         # ========================
 
         return dx
