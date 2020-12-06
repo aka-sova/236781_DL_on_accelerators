@@ -545,6 +545,8 @@ class MLP(Block):
         # 1st layer
         blocks.append(Linear(in_features, hidden_features[0]))
         blocks.append(ReLU()) if activation == 'relu' else blocks.append(Sigmoid())
+        if dropout > 0:
+            blocks.append(Dropout(dropout))
 
         for hidden_feature_idx in range(len(hidden_features) - 1):
             in_feat = hidden_features[hidden_feature_idx]
@@ -552,6 +554,9 @@ class MLP(Block):
 
             blocks.append(Linear(in_feat, out_feat))
             blocks.append(ReLU()) if activation == 'relu' else blocks.append(Sigmoid())
+
+            if dropout > 0:
+                blocks.append(Dropout(dropout))
 
         # last layer
         blocks.append(Linear(hidden_features[-1], num_classes))
