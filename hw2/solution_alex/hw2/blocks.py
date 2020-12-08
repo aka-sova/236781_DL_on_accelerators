@@ -388,7 +388,18 @@ class Dropout(Block):
         #  Notice that contrary to previous blocks, this block behaves
         #  differently a according to the current training_mode (train/test).
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        out = x
+        N = x.shape[1]
+        D = N * self.p
+        # print(out.shape)
+        self.dropout = torch.ones(out.shape)
+        if self.training_mode:
+            for ii, i in enumerate(out):
+                # print(i.shape)
+                inds = torch.randperm(out.shape[1])
+                # print(inds.shape)
+                i[inds[:int(D)]].mul_(0)
+                self.dropout[ii, inds[:int(D)]].mul_(0)
         # ========================
 
         return out
@@ -396,7 +407,14 @@ class Dropout(Block):
     def backward(self, dout):
         # TODO: Implement the dropout backward pass.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if torch.isnan(dout).any():
+            raise ValueError('Gradients must not be nan')
+        if self.training_mode:
+            dx = dout * self.dropout
+        else:
+            dx = dout
+        if torch.isnan(dx).any():
+            raise ValueError('Failed to derivate')
         # ========================
 
         return dx
@@ -527,6 +545,8 @@ class MLP(Block):
         # 1st layer
         blocks.append(Linear(in_features, hidden_features[0]))
         blocks.append(ReLU()) if activation == 'relu' else blocks.append(Sigmoid())
+        if dropout > 0:
+            blocks.append(Dropout(dropout))
 
         for hidden_feature_idx in range(len(hidden_features) - 1):
             in_feat = hidden_features[hidden_feature_idx]
@@ -534,6 +554,9 @@ class MLP(Block):
 
             blocks.append(Linear(in_feat, out_feat))
             blocks.append(ReLU()) if activation == 'relu' else blocks.append(Sigmoid())
+
+            if dropout > 0:
+                blocks.append(Dropout(dropout))
 
         # last layer
         blocks.append(Linear(hidden_features[-1], num_classes))

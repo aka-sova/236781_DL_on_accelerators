@@ -80,7 +80,26 @@ class Trainer(abc.ABC):
             #    save the model to the file specified by the checkpoints
             #    argument.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            # Training
+            res = self.train_epoch(dl_train, **kw)
+            train_loss.append(torch.mean((torch.tensor(res.losses))).item())
+            train_acc.append(res.accuracy)
+            # Testing
+            res = self.test_epoch(dl_test, **kw)
+            test_loss.append(torch.mean((torch.tensor(res.losses))).item())
+            improvement = 0
+            if epoch > 0:
+                # condition for accuracy improvement in epoch againt past epochs
+                if res.accuracy > torch.max(torch.tensor(test_acc)):
+                    improvement+=1
+                    if checkpoints is not None:
+                        torch.save(self.model, checkpoints)
+                else:
+                    improvement=0
+            test_acc.append(res.accuracy)
+            if early_stopping is not None:
+                if improvement < early_stopping:
+                    break
             # ========================
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
@@ -200,7 +219,17 @@ class BlocksTrainer(Trainer):
         #  - Calculate number of correct predictions (make sure it's an int,
         #    not a tensor) as num_correct.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #Training block from tutorial 3
+        # Forward pass
+        y_pred = self.model(X)
+        # Compute loss
+        loss = self.loss_fn(y_pred, y)
+        # Backward pass
+        self.optimizer.zero_grad()
+        self.model.backward(self.loss_fn.backward())
+        # Optimization step
+        self.optimizer.step()
+        num_correct = torch.sum((y - y_pred.argmax(dim=1)) == 0).item()
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -210,7 +239,10 @@ class BlocksTrainer(Trainer):
 
         # TODO: Evaluate the Block model on one batch of data.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        y_pred = self.model(X)
+        # Compute loss
+        loss = self.loss_fn(y_pred, y)
+        num_correct = torch.sum((y - y_pred.argmax(dim=1)) == 0).item()
         # ========================
 
         return BatchResult(loss, num_correct)
