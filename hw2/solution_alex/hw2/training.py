@@ -305,7 +305,13 @@ class TorchTrainer(Trainer):
             #  - Forward pass
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+
+            y_pred = self.model(X)
+
+            # Compute loss
+            loss = self.loss_fn(y_pred, y)
+            num_correct = torch.sum((y - y_pred.argmax(dim=1)) == 0).item()
+
             # ========================
 
         return BatchResult(loss, num_correct)
