@@ -317,11 +317,13 @@ class ResidualBlock(nn.Module):
 
             if i < len(conv_ch_list) - 2:
                 # for all layers except the last layer
+                if dropout > 0:
+                    layers.append(nn.Dropout2d(p=dropout))
+
                 if batchnorm:
                     layers.append(nn.BatchNorm2d(num_features=conv_ch_list[i + 1]))
 
-                if dropout > 0:
-                    layers.append(nn.Dropout(p=dropout))
+
 
                 if activation_type == 'relu':
                     layers.append(nn.ReLU(**activation_params))
@@ -332,20 +334,32 @@ class ResidualBlock(nn.Module):
 
         # skip path layer
 
+        skip_layers = []
+
         if in_channels == channels[-1]:
-            self.shortcut_path = nn.Identity()
+
+            # have to apply identity
+            pass
+            # skip_layers.append(nn.Identity())
+
         else:
-            self.shortcut_path = nn.Conv2d(in_channels=in_channels,
-                                           out_channels=channels[-1],
-                                           kernel_size=1,
-                                           padding=0,
-                                           stride=1,
-                                           dilation=1,
-                                           bias=False)
-
+            conv_identity_layer = nn.Conv2d(in_channels=in_channels,
+                                            out_channels=channels[-1],
+                                            kernel_size=1,
+                                            padding=0,
+                                            stride=1,
+                                            dilation=1,
+                                            bias=False)
             # set weights to 1 to make it identity
-            self.shortcut_path.weight = torch.nn.Parameter(torch.ones_like(self.shortcut_path.weight))
+            conv_identity_layer.weight = torch.nn.Parameter(torch.ones_like(conv_identity_layer.weight))
 
+
+
+            skip_layers.append(conv_identity_layer)
+
+
+
+        self.shortcut_path = nn.Sequential(*skip_layers)
         # ========================
 
     def forward(self, x):
@@ -480,8 +494,8 @@ class ResNetClassifier(ConvClassifier):
             layers.append(ResidualBlock(in_channels=conv_ch_list[init_channel],
                                         channels=conv_ch_list[init_channel + 1:],
                                         kernel_sizes=[3] * (N % P),
-                                        batchnorm=False,
-                                        dropout=0,
+                                        batchnorm=self.batchnorm,
+                                        dropout=self.dropout,
                                         activation_type=self.activation_type,
                                         activation_params=self.activation_params))
 
