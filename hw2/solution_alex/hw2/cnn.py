@@ -324,7 +324,6 @@ class ResidualBlock(nn.Module):
                     layers.append(nn.BatchNorm2d(num_features=conv_ch_list[i + 1]))
 
 
-
                 if activation_type == 'relu':
                     layers.append(nn.ReLU(**activation_params))
                 else:
@@ -351,7 +350,7 @@ class ResidualBlock(nn.Module):
                                             dilation=1,
                                             bias=False)
             # set weights to 1 to make it identity
-            conv_identity_layer.weight = torch.nn.Parameter(torch.ones_like(conv_identity_layer.weight))
+            # conv_identity_layer.weight = torch.nn.Parameter(torch.ones_like(conv_identity_layer.weight))
 
 
 
