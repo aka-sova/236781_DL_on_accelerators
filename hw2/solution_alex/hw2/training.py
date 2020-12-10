@@ -83,24 +83,30 @@ class Trainer(abc.ABC):
             # Training
             res = self.train_epoch(dl_train, **kw)
             train_loss.append(torch.mean((torch.tensor(res.losses))).item())
-            train_acc.append(res.accuracy)
+            train_acc.append(res.accuracy.item())
+            actual_num_epochs += 1
+
             # Testing
             res = self.test_epoch(dl_test, **kw)
             test_loss.append(torch.mean((torch.tensor(res.losses))).item())
-            improvement = 0
+
             if epoch > 0:
-                # condition for accuracy improvement in epoch againt past epochs
-                if res.accuracy > torch.max(torch.tensor(test_acc)):
-                    improvement+=1
+                # condition for accuracy improvement in epoch against past epochs
+                if res.accuracy < torch.max(torch.tensor(test_acc)):
+                    epochs_without_improvement += 1
                     if checkpoints is not None:
                         torch.save(self.model, checkpoints)
                 else:
-                    improvement=0
+                    epochs_without_improvement=0
+
+                if early_stopping is not None:
+                    if epochs_without_improvement > early_stopping:
+                        print("Stopped early")
+                        break
+
             test_acc.append(res.accuracy)
-            if early_stopping is not None:
-                if improvement < early_stopping:
-                    break
             # ========================
+
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
 
@@ -287,9 +293,6 @@ class TorchTrainer(Trainer):
         highest_y = torch.argmax(y_pred, dim=1)
         true_y = highest_y == y
         num_correct = torch.sum(true_y)
-
-
-
         # ========================
 
         return BatchResult(loss, num_correct)

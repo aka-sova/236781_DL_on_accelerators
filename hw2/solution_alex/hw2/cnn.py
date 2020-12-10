@@ -134,41 +134,34 @@ class ConvClassifier(nn.Module):
 
             return int(((input_size + 2 * padding - (dilation * (kernel_size - 1)) - 1) / stride) + 1)
 
-        # first layer
-        layers.append(nn.Conv2d(in_channels, self.channels[0], **self.conv_params))
-        curr_h = update_size_filter(curr_h, 0, layers[-1])
-        curr_w = update_size_filter(curr_w, 1, layers[-1])
 
-        layers = add_activation_function(layers, self.activation_type, **self.activation_params)
-        curr_p = 1  # already added 1 layer
-
-        # print(f"layer size {curr_h}")
+        in_ch_list = [in_channels]
+        conv_ch_list = in_ch_list + self.channels
 
         for i in range(conv_act_pool_num):
 
             # CONV -> ACT
-            while curr_p != P:
-                layers.append(nn.Conv2d(self.channels[i], self.channels[i + 1], **self.conv_params))
-                curr_p += 1
+            for j in range(P):
+                layers.append(nn.Conv2d(conv_ch_list[i*P + j], conv_ch_list[i*P + (j+1)], **self.conv_params))
                 curr_h = update_size_filter(curr_h, 0, layers[-1])
                 curr_w = update_size_filter(curr_w, 1, layers[-1])
-                # print(f"layer size {curr_h}")
 
                 layers = add_activation_function(layers, self.activation_type, **self.activation_params)
 
-            curr_p = 0
+
             # POOL
             layers = add_pool_function(layers, self.pooling_type, **self.pooling_params)
             curr_h = update_size_filter(curr_h, 0, layers[-1])
             curr_w = update_size_filter(curr_w, 1, layers[-1])
-            # print(f"layer size {curr_h}")
+
 
         # check if need conv layer without pool
         if N % P > 0:
-            init_i = ceil(N / P) - 1
 
-            for i in range((N % P) - 1):
-                layers.append(nn.Conv2d(self.channels[init_i + i], self.channels[init_i + i + 1], **self.conv_params))
+            init_i = conv_act_pool_num * P
+
+            for i in range(N % P):
+                layers.append(nn.Conv2d(conv_ch_list[init_i + i], conv_ch_list[init_i + i + 1], **self.conv_params))
                 curr_h = update_size_filter(curr_h, 0, layers[-1])
                 curr_w = update_size_filter(curr_w, 1, layers[-1])
                 # print(f"layer size {curr_h}")
@@ -463,10 +456,10 @@ class ResNetClassifier(ConvClassifier):
         if conv_act_pool_num > 0:
             for i in range(conv_act_pool_num):
                 init_channel = i * (P - 1)
-
-                print(f"init_channel = {init_channel}")
-                print(f"in_channels={conv_ch_list[init_channel]}")
-                print(f"conv_ch_list[init_channel + 1: init_channel + P + 1] = {conv_ch_list[init_channel + 1: init_channel + P + 1]}")
+                #
+                # print(f"init_channel = {init_channel}")
+                # print(f"in_channels={conv_ch_list[init_channel]}")
+                # print(f"conv_ch_list[init_channel + 1: init_channel + P + 1] = {conv_ch_list[init_channel + 1: init_channel + P + 1]}")
 
                 layers.append(ResidualBlock(in_channels=conv_ch_list[init_channel],
                                             channels=conv_ch_list[init_channel + 1: init_channel + P + 1],
@@ -486,9 +479,9 @@ class ResNetClassifier(ConvClassifier):
         print("\nleft block")
         if N % P > 0:
             init_channel = (ceil(N / P)-1) * P
-            print(f"init_channel = {init_channel}")
-            print(f"in_channels={conv_ch_list[init_channel]}")
-            print(f"conv_ch_list[init_channel + 1:] = {conv_ch_list[init_channel + 1:]}")
+            # print(f"init_channel = {init_channel}")
+            # print(f"in_channels={conv_ch_list[init_channel]}")
+            # print(f"conv_ch_list[init_channel + 1:] = {conv_ch_list[init_channel + 1:]}")
             # without batchnorm and dropout
             layers.append(ResidualBlock(in_channels=conv_ch_list[init_channel],
                                         channels=conv_ch_list[init_channel + 1:],

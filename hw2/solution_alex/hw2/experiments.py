@@ -89,16 +89,12 @@ def run_experiment(
 
     # duplicate each filter by layers per block
     channels = [filt for filt in filters_per_layer for block_layer in range(layers_per_block)]
-
+    # print(f"channels = {channels}")
     in_size = ds_train.data[0].shape # H,W,C
     in_size = tuple(in_size[i] for i in [2, 0, 1])
 
     # find target space
     out_classes = len(set(ds_train.targets))
-
-
-    # set some default kernel size
-
 
     if model_type == "cnn":
         model = cnn.ConvClassifier(in_size=in_size,
