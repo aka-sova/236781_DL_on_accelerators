@@ -43,6 +43,9 @@ def run_experiment(
     # You can add extra configuration for your experiments here
     pooling_params=dict(kernel_size=2),
     conv_params=dict(kernel_size=3, stride=1, padding=1),
+    activation_type='relu',
+    activation_params={},
+    pooling_type="max",
     **kw):
     """
     Executes a single run of a Part3 experiment with a single configuration.
@@ -103,6 +106,9 @@ def run_experiment(
                                    hidden_dims=hidden_dims,
                                    pooling_params=pooling_params,
                                    conv_params=conv_params,
+                                   activation_type = activation_type,
+                                   activation_params = activation_params,
+                                   pooling_type = pooling_type,
                                    **kw)
     else:
         model = cnn.ResNetClassifier(in_size=in_size,
@@ -112,6 +118,9 @@ def run_experiment(
                                      hidden_dims=hidden_dims,
                                      pooling_params=pooling_params,
                                      conv_params=conv_params,
+                                     activation_type=activation_type,
+                                     activation_params=activation_params,
+                                     pooling_type=pooling_type,
                                      **kw)
 
     # 2. create optimizer. Weight decay is L2 penalty
