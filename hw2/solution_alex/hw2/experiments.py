@@ -43,8 +43,7 @@ def run_experiment(
     # You can add extra configuration for your experiments here
     pooling_params=dict(kernel_size=2),
     conv_params=dict(kernel_size=3, stride=1, padding=1),
-    **kw,
-):
+    **kw):
     """
     Executes a single run of a Part3 experiment with a single configuration.
 
