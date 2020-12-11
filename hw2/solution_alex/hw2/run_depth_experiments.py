@@ -117,7 +117,7 @@ def run_experiments():
                                        early_stopping=5,
                                        filters_per_layer=K,
                                        layers_per_block=L,
-                                       pool_every=4,
+                                       pool_every=8,
                                        hidden_dims=[1000],
                                        model_type='resnet',
                                        conv_params=dict(kernel_size=3, stride=1, padding=1),
