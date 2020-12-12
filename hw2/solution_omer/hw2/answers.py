@@ -11,13 +11,15 @@ math (delimited with $$).
 part1_q1 = r"""
 **Your answer:**
 
+Input tensor X is 128 X 1024
+Hidden layer tensor size is 1024 X 2048
+Output tensor size is 128 X 2048. 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The Jacobian of the output tensor w.r.t. a single input is 1024 X 2048. 
+ The Jacobian of the output tensor w.r.t. a batch of 128 inputs is 1024 X 2048 X 128 
+
+The amount of memory required to store 1 int is 4 bytes, thus is it required 1024 X 2048 X 128 X 4 [bytes] ~= 1.073 [GB]
+
 
 """
 
@@ -41,7 +43,7 @@ def part2_optim_hp():
     # You may want to use different learning rates for each optimizer.
     # ====== YOUR CODE: ======
     # hyper parameters for vanilla SGD
-    #wstd, lr_vanilla, lr_momentum, lr_rmsprop, reg, = 0.1, 0.1, 0, 0, 0.001
+    #wstd, lr_vanilla, lr_momentum, lr_rmsprop, reg, = 0.1, 0.1, 0, 0, 0.0005
     # hyper parameters for momentum SGD
     #wstd, lr_vanilla, lr_momentum, lr_rmsprop, reg, = 0.1, 0.1, 0.01, 0, 0.001
     # hyper parameters for RMSprop
@@ -69,27 +71,28 @@ def part2_dropout_hp():
 
 part2_q1 = r"""
 **Your answer:**
+1. We expected test accuracy of the network with dropout to be better than the network without,
+as we can see in the graphs. Dropout has the effect of making the training process noisy, 
+forcing nodes within a layer to probabilistically take on more or less responsibility for the inputs,
+which suggests that perhaps dropout breaks-up situations where network layers co-adapt to correct mistakes 
+from prior layers, in turn making the model more robust and thus performs better on test set
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+2.A network wit low dropout settings  performed better than a network with high dropout setting
+because when the dropout rate is high, 0.8-1, the effect of forcing nodes within a layer to probabilistically 
+take on more or less responsibility for the input is deminished.
 
 """
 
 part2_q2 = r"""
 **Your answer:**
 
+The situation during training when , a model with the cross-entropy loss function,
+test loss increases for a few epochs while the test accuracy also increases is possible.
+Loss function is being calculated using actual predicted probabilities while accuracy is being 
+calculated using one hot vectors thus,when predicted probability mass is distributed both test loss
+and test accuracy increase.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+
 
 """
 # ==============
