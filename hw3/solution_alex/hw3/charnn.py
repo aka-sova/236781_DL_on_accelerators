@@ -23,7 +23,13 @@ def char_maps(text: str):
     #  It's best if you also sort the chars before assigning indices, so that
     #  they're in lexical order.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    # unique chars sorted
+    sorted_chars = sorted(list(set(text)))
+
+    char_to_idx = { sorted_char : idx for idx, sorted_char in enumerate(sorted_chars)}
+    idx_to_char = { idx:  sorted_char for idx, sorted_char in enumerate(sorted_chars)}
+
     # ========================
     return char_to_idx, idx_to_char
 
@@ -39,7 +45,25 @@ def remove_chars(text: str, chars_to_remove):
     """
     # TODO: Implement according to the docstring.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    # this is the most elegant way to implement a counter that i found
+    class Null_replacer(object):
+        def __init__(self):
+            self.counter = 0
+
+        def __call__(self, match):
+            self.counter += 1
+            return ""
+
+    # a function being called when the match happens
+    null_replacer = Null_replacer()
+
+    chars_to_remove_str = "".join(chars_to_remove)
+    chars_to_remove_str = f"[{chars_to_remove_str}]"
+
+    text_clean = re.sub(chars_to_remove_str, null_replacer, text)
+    n_removed = null_replacer.counter
+
     # ========================
     return text_clean, n_removed
 
@@ -59,7 +83,20 @@ def chars_to_onehot(text: str, char_to_idx: dict) -> Tensor:
     """
     # TODO: Implement the embedding.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    # use the broadcasting
+
+    text_chars = list(text)
+
+    N = len(text_chars)
+    D = len(char_to_idx.keys())
+    result = torch.zeros(size=(N, D), dtype=torch.int8)
+
+    text_idxs = [char_to_idx[char] for char in text_chars]
+
+    idxs = torch.arange(N)
+    result[idxs, text_idxs] = 1
+
     # ========================
     return result
 
@@ -76,7 +113,12 @@ def onehot_to_chars(embedded_text: Tensor, idx_to_char: dict) -> str:
     """
     # TODO: Implement the reverse-embedding.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    idx_num_vec = torch.argmax(embedded_text, axis=1).tolist()
+
+    chars_list = [idx_to_char[idx] for idx in idx_num_vec]
+    result = "".join(chars_list)
+
     # ========================
     return result
 
