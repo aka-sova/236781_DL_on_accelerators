@@ -147,7 +147,39 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     #  3. Create the labels tensor in a similar way and convert to indices.
     #  Note that no explicit loops are required to implement this function.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    embedded_text = chars_to_onehot(text = text, char_to_idx=char_to_idx)
+
+    N = embedded_text.shape[0] - seq_len
+    S = seq_len
+    V = len(char_to_idx)
+
+    labels = torch.zeros(N, S)
+
+    # -- samples
+
+    V_idx_tensor = torch.arange(V).view(1, V) # [ 1 x V ]
+    S_idx_tensor = torch.arange(S).view(S, 1) # [ S x 1 ]
+    N_idx_tensor = torch.arange(N-S).view(1, 1, N-S) # [ 1 x 1 x N-S ]
+
+    SV_tensor = (V_idx_tensor + S_idx_tensor).view(S, V, 1)  # [S x V x 1]
+    SVN_tensor = SV_tensor + N_idx_tensor  # [S x V x N]
+
+    fixed_indixes = embedded_text.view(-1)[SVN_tensor.view(-1)]
+    samples = fixed_indixes.view(N-S, S, V)
+
+
+    # -- labels
+
+    text_list = [char_to_idx[char] for char in list(text)]
+    text_chars_tensor = torch.tensor(text_list)
+
+    # N_idx_tensor = torch.arange(N - S).view(1, N - S)
+    SN_tensor = N_idx_tensor + S_idx_tensor
+
+    fixed_char_indixes = text_chars_tensor[SN_tensor.T.contiguous().view(-1)]
+    labels = fixed_char_indixes.view(N-S, S)
+
     # ========================
     return samples, labels
 
