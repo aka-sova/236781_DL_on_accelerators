@@ -150,23 +150,23 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
 
     embedded_text = chars_to_onehot(text = text, char_to_idx=char_to_idx)
 
-    N = embedded_text.shape[0] - seq_len
+    N = (embedded_text.shape[0] - 1) // seq_len
     S = seq_len
     V = len(char_to_idx)
 
-    labels = torch.zeros(N, S)
-
     # -- samples
 
-    V_idx_tensor = torch.arange(V).view(1, V) # [ 1 x V ]
-    S_idx_tensor = torch.arange(S).view(S, 1) # [ S x 1 ]
-    N_idx_tensor = torch.arange(N-S).view(1, 1, N-S) # [ 1 x 1 x N-S ]
+    N_idx_tensor = torch.arange(start = 0, end = N*S*V, step = S*V).view(N, 1, 1)
+    S_idx_tensor = torch.arange(start = 0, end = V*S, step = V).view(1, S, 1)
+    V_idx_tensor = torch.arange(V).view(1, 1, V)
 
-    SV_tensor = (V_idx_tensor + S_idx_tensor).view(S, V, 1)  # [S x V x 1]
-    SVN_tensor = SV_tensor + N_idx_tensor  # [S x V x N]
+    NSV_tensor = N_idx_tensor + S_idx_tensor + V_idx_tensor # [N x S x V]
+    NSV_flat = NSV_tensor.view(-1)
 
-    fixed_indixes = embedded_text.view(-1)[SVN_tensor.view(-1)]
-    samples = fixed_indixes.view(N-S, S, V)
+    embdedded_text_flat = embedded_text.view(-1)
+
+    fixed_indixes = embdedded_text_flat[NSV_flat]
+    samples = fixed_indixes.view(N, S, V)
 
 
     # -- labels
@@ -174,11 +174,12 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     text_list = [char_to_idx[char] for char in list(text)]
     text_chars_tensor = torch.tensor(text_list)
 
-    # N_idx_tensor = torch.arange(N - S).view(1, N - S)
-    SN_tensor = N_idx_tensor + S_idx_tensor
+    N_idx_tensor_single_step = torch.arange(start=0, end=N * S, step=S).view(N, 1, 1)
+    S_idx_tensor_single_step = torch.arange(start=1, end=S+1,   step=1).view(1, S, 1)
+    NS_tensor_single_char = N_idx_tensor_single_step + S_idx_tensor_single_step
 
-    fixed_char_indixes = text_chars_tensor[SN_tensor.T.contiguous().view(-1)]
-    labels = fixed_char_indixes.view(N-S, S)
+    fixed_char_indixes = text_chars_tensor[NS_tensor_single_char[:, :, 0].view(-1)]
+    labels = fixed_char_indixes.view(N, S)
 
     # ========================
     return samples, labels
