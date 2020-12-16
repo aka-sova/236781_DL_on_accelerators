@@ -103,8 +103,8 @@ and test accuracy increase.
 part3_q1 = r"""
 **Your answer:**
 
-# of weights for residual block: 3*3*64*64
-# of weights for bottleneck block: 1*1*64*256
+# of weights for residual block: 3 * 3* 64 * 64
+# of weights for bottleneck block: 1* 1 * 64 * 256
 
 
 
@@ -124,8 +124,9 @@ change regularization term, add dropout.
 part3_q3 = r"""
 **Your answer:**
 
-The increase in number of filter in models with L=2,4 did not improve significatly performance in compare to 
-experiment 1.1 
+The increase in number of filter in models with L=2,4 did improve  performance in compare to 
+experiment 1.1 because it extracts more features.
+When L=8 we still have the probelm of vanishing gradients
 
 """
 
@@ -133,7 +134,7 @@ part3_q4 = r"""
 **Your answer:**
 
 Differnet number of convolution filter per layer did not improve performance as the depth of layer increases,
-further more from L=3 the model was unable to learn.
+further more from L=3 the model was unable to learn because vanishing gradient
 
 """
 
