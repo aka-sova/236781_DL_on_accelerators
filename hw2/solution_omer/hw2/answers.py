@@ -43,7 +43,7 @@ def part2_optim_hp():
     # You may want to use different learning rates for each optimizer.
     # ====== YOUR CODE: ======
     # hyper parameters for vanilla SGD
-    #wstd, lr_vanilla, lr_momentum, lr_rmsprop, reg, = 0.1, 0.1, 0, 0, 0.0005
+    #wstd, lr_vanilla, lr_momentum, lr_rmsprop, reg, = 0.1, 0.1, 0, 0, 0.0003
     # hyper parameters for momentum SGD
     #wstd, lr_vanilla, lr_momentum, lr_rmsprop, reg, = 0.1, 0.1, 0.01, 0, 0.001
     # hyper parameters for RMSprop
@@ -77,7 +77,7 @@ forcing nodes within a layer to probabilistically take on more or less responsib
 which suggests that perhaps dropout breaks-up situations where network layers co-adapt to correct mistakes 
 from prior layers, in turn making the model more robust and thus performs better on test set
 
-2.A network wit low dropout settings  performed better than a network with high dropout setting
+2.A network with low dropout settings  performed better than a network with high dropout setting
 because when the dropout rate is high, 0.8-1, the effect of forcing nodes within a layer to probabilistically 
 take on more or less responsibility for the input is deminished.
 
@@ -103,78 +103,65 @@ and test accuracy increase.
 part3_q1 = r"""
 **Your answer:**
 
+# of weights for residual block: 3*3*64*64
+# of weights for bottleneck block: 1*1*64*256
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+
 
 """
 
 part3_q2 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+1.Depth can reduce number of learned units required to represent a desired function by a NN
+and can reduce the amount of generalization error which will improve accuracy on test set.
+L=2 gave the best 
+2. A model with L =8,16 did not learned because they were numerical instble which led to exploding and vanishing gradients
+change regularization term, add dropout.
 
 """
 
 part3_q3 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The increase in number of filter in models with L=2,4 did not improve significatly performance in compare to 
+experiment 1.1 
 
 """
 
 part3_q4 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+Differnet number of convolution filter per layer did not improve performance as the depth of layer increases,
+further more from L=3 the model was unable to learn.
 
 """
 
 part3_q5 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+When adding residual block the models with increase depth were able to learn, in comparison to experiment 
+1.3 and 1.1 because residual block deals with vanished gradients which enables us to train deeper networks. 
 
 """
 
 part3_q6 = r"""
 **Your answer:**
 
+In our YourCodeNet class with added batch normalization and dropout to the residual block which improve performance
+in comparison to experiment 1 where we did not.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+We used Batch Normalization because it has the effect of stabilizing the learning process and dramatically reducing
+the number of training epochs required to train deep networks, and Dropout because it has the effect of making 
+the training process noisy, forcing nodes within a layer to probabilistically 
+take on more or less responsibility for the inputs,which suggests that perhaps dropout breaks-up situations 
+where network layers co-adapt to correct mistakes  from prior layers, in turn making the model more robust and
+thus performs better on test set.
+
+
+
+
+
 
 """
 # ==============
