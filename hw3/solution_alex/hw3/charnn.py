@@ -199,7 +199,14 @@ def hot_softmax(y, dim=0, temperature=1.0):
     """
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    y_exp = torch.exp(y/temperature)
+
+    softmax_sum = torch.sum(y_exp, dim=dim)
+    softmax_sum = torch.unsqueeze(softmax_sum, dim=dim)
+    result = y_exp / softmax_sum
+
+
     # ========================
     return result
 
@@ -235,7 +242,48 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  necessary for this. Best to disable tracking for speed.
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    sampling_amount = 100 # what's the right number?..
+    new_sequence = []
+
+    # encode the start sequence
+    sequence = chars_to_onehot(start_sequence, char_to_idx) # num chars x embedding size
+    sequence = sequence.to(dtype=torch.float)
+    sequence_batch = torch.unsqueeze(sequence, dim = 0) # B x S x V
+
+    # initial
+    hidden_state = None
+
+
+    with torch.no_grad():
+        for char_num in range(n_chars - len(start_sequence)):
+
+            # 1. feed the inputs
+            y, h = model.forward(input = sequence_batch, hidden_state = hidden_state)
+
+            # 2. take the last output, turn into probabilities
+            scores = y[:, -1, :] # B x S x O   , we take last char
+            output_probs = hot_softmax(scores, temperature=T) # B x O
+
+            # 3. sample the output char from the probabilities
+            sampling_indixes = torch.multinomial(output_probs, sampling_amount, replacement=True)
+
+            # find the most sampled char from the probabilities
+            indixes, counts = sampling_indixes.unique(return_counts=True)
+            chosen_char_embedded = indixes[torch.argmax(counts)]
+            chosen_char_str = idx_to_char[chosen_char_embedded.item()]
+            new_sequence.append(chosen_char_str)
+
+            # print(f"Chosen char: {chosen_char_str}")
+
+            # propagate the hidden state, change the sequence
+            hidden_state = h
+            # remove first char, place last char
+            sequence_batch = torch.roll(sequence_batch, -1, 1) # do -1 shift along dim of S.
+            sequence_batch[0, -1, :] =chosen_char_embedded
+
+    out_text = start_sequence + "".join(new_sequence)
+
     # ========================
 
     return out_text
@@ -354,9 +402,9 @@ class MultilayerGRU(nn.Module):
         #   all them multiply the same input matrix. Same for the W_hz, W_hr, W_hg
         #   for the first layer the input is the actual input, for next layers the hidden state is the input
 
-        # init the parameters with normal distribution, mean = 0, std = 1
+        # init the parameters with normal distribution, mean = 0, std = 0.1
         mean = 0
-        std = 1
+        std = 0.1
 
         for layer in range(n_layers+1):
 
@@ -542,7 +590,7 @@ class MultilayerGRU(nn.Module):
 
                 # reset gate
                 r_t = torch.matmul(x_t, W_xr[layer]) + torch.matmul(h_t_m1, W_hr[layer]) + b_r[layer]
-                torch.sigmoid_(r_t) # B x ? x H
+                torch.sigmoid_(r_t) # B x H
 
                 g_t = torch.matmul(x_t, W_xg[layer]) + torch.matmul(torch.mul(r_t, h_t_m1), W_hg[layer]) + b_g[layer]
                 torch.tanh_(g_t)
