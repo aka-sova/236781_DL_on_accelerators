@@ -181,6 +181,9 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     fixed_char_indixes = text_chars_tensor[NS_tensor_single_char[:, :, 0].view(-1)]
     labels = fixed_char_indixes.view(N, S)
 
+    samples.to(device)
+    labels.to(device)
+
     # ========================
     return samples, labels
 
@@ -265,7 +268,34 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         #  you can drop it.
         idx = None  # idx should be a 1-d list of indices.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        dataset_size = len(self.dataset)
+        batches_num = dataset_size // self.batch_size
+        dataset_size_cut = batches_num * self.batch_size
+
+
+        # move simple (but costly) way
+
+        # idx_list = [list(range(batch_num, dataset_size_cut + batches_num - (batches_num - batch_num + 1), batches_num))
+        #             for batch_num in range(batches_num)]
+        #
+        # # hope it's okay. It has better performance than sum
+        # from itertools import chain
+        #
+        # idx = list(chain(*idx_list))
+
+        # with matrixes
+
+        hor_tensor = torch.arange(batches_num) # horizontal - 0, 1, 2
+        ver_tensor = torch.arange(0, dataset_size_cut - batches_num + 1, batches_num) # vertical - 0, 3, 6
+
+        hor_tensor = hor_tensor.view(1,batches_num)
+        ver_tensor = ver_tensor.view(self.batch_size, 1)
+
+        idxs_tensor = torch.reshape((hor_tensor + ver_tensor).T,  [1, -1])
+
+        idx = idxs_tensor[0, :].tolist()
+
         # ========================
         return iter(idx)
 
@@ -312,7 +342,60 @@ class MultilayerGRU(nn.Module):
         #      then call self.register_parameter() on them. Also make
         #      sure to initialize them. See functions in torch.nn.init.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # each layer creates new RNN block
+        # Each RNN block has:
+        #   for z_t : W_xz, W_hz, b_z
+        #   for r_t : W_xr, W_hr, b_r
+        #   for g_t : W_xg, W_hg, b_g
+
+        # following RNN implementation in pytorch (many code will appear similar to theirs):
+        #   I stack W_xz, W_xr, W_xg together since all
+        #   all them multiply the same input matrix. Same for the W_hz, W_hr, W_hg
+        #   for the first layer the input is the actual input, for next layers the hidden state is the input
+
+        # init the parameters with normal distribution, mean = 0, std = 1
+        mean = 0
+        std = 1
+
+        for layer in range(n_layers+1):
+
+            # for layers > 1, the input is hidden state from previous layer
+            layer_input_size  = in_dim  if layer == 0           else h_dim
+
+            if layer < n_layers:
+                self.layer_params.append(layer)
+                self.layer_params[layer] = {}
+                self.layer_params[layer]["W_xz"] = nn.Parameter(torch.Tensor(layer_input_size, h_dim))
+                self.layer_params[layer]["W_xr"] = nn.Parameter(torch.Tensor(layer_input_size, h_dim))
+                self.layer_params[layer]["W_xg"] = nn.Parameter(torch.Tensor(layer_input_size, h_dim))
+                self.layer_params[layer]["W_hz"] = nn.Parameter(torch.Tensor(h_dim, h_dim))
+                self.layer_params[layer]["W_hr"] = nn.Parameter(torch.Tensor(h_dim, h_dim))
+                self.layer_params[layer]["W_hg"] = nn.Parameter(torch.Tensor(h_dim, h_dim))
+                self.layer_params[layer]["b_z"] = nn.Parameter(torch.Tensor(h_dim))
+                self.layer_params[layer]["b_r"] = nn.Parameter(torch.Tensor(h_dim))
+                self.layer_params[layer]["b_g"] = nn.Parameter(torch.Tensor(h_dim))
+            else:
+
+                # register the output params
+                self.layer_params.append(layer)
+                self.layer_params[layer] = {}
+                self.layer_params[layer]["W_hy"] = nn.Parameter(torch.Tensor(h_dim, out_dim))
+                self.layer_params[layer]["b_y"] =  nn.Parameter(torch.Tensor(out_dim))
+
+            # init and register
+
+            for param in self.layer_params[layer].keys():
+                torch.nn.init.normal_(self.layer_params[layer][param], mean=mean, std=std)
+                self.register_parameter(f"{param}_l_{layer}", self.layer_params[layer][param])
+
+
+
+
+        if dropout > 0:
+            self.layer_params.append(n_layers+1)
+            self.layer_params[n_layers+1] = nn.Dropout(p=dropout)
+
         # ========================
 
     def forward(self, input: Tensor, hidden_state: Tensor = None):
@@ -350,6 +433,140 @@ class MultilayerGRU(nn.Module):
         #  Tip: You can use torch.stack() to combine multiple tensors into a
         #  single tensor in a differentiable manner.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+
+        dropout = False
+        if self.n_layers+2 == len(self.layer_params):
+            dropout = True
+
+        W_xz =  []
+        W_hz =  []
+        b_z =   []
+        W_xr =  []
+        W_hr =  []
+        b_r =   []
+        W_xg =  []
+        W_hg =  []
+        b_g =   []
+
+        # for layer in range(self.n_layers):
+        #
+        #     # next hidden state of each previous time block
+        #     # is the input to the next time block as h_(t-1)
+        #
+        #     ### stack the weights
+        #     ### ----------------
+        #
+        #     W_xz.append(torch.stack([self.layer_params[layer]["W_xz"]] * batch_size))
+        #     W_hz.append(torch.stack([self.layer_params[layer]["W_hz"]] * batch_size))
+        #     b_z.append(torch.stack([self.layer_params[layer]["b_z"]] * batch_size))
+        #
+        #     W_xr.append(torch.stack([self.layer_params[layer]["W_xr"]] * batch_size))
+        #     W_hr.append(torch.stack([self.layer_params[layer]["W_hr"]] * batch_size))
+        #     b_r.append(torch.stack([self.layer_params[layer]["b_r"]] * batch_size))
+        #
+        #     W_xg.append(torch.stack([self.layer_params[layer]["W_xg"]] * batch_size))
+        #     W_hg.append(torch.stack([self.layer_params[layer]["W_hg"]] * batch_size))
+        #     b_g.append(torch.stack([self.layer_params[layer]["b_g"]] * batch_size))
+        #
+        # W_hy_stacked = torch.stack([self.layer_params[self.n_layers]["W_hy"]] * batch_size) # B x H x O
+        # b_y_stacked = torch.stack([self.layer_params[self.n_layers]["b_y"]] * batch_size)
+
+        for layer in range(self.n_layers):
+
+            # next hidden state of each previous time block
+            # is the input to the next time block as h_(t-1)
+
+            ### stack the weights
+            ### ----------------
+
+            W_xz.append(self.layer_params[layer]["W_xz"])
+            W_hz.append(self.layer_params[layer]["W_hz"])
+            b_z.append(self.layer_params[layer]["b_z"])
+
+            W_xr.append(self.layer_params[layer]["W_xr"])
+            W_hr.append(self.layer_params[layer]["W_hr"])
+            b_r.append(self.layer_params[layer]["b_r"])
+
+            W_xg.append(self.layer_params[layer]["W_xg"])
+            W_hg.append(self.layer_params[layer]["W_hg"])
+            b_g.append(self.layer_params[layer]["b_g"])
+
+        W_hy = self.layer_params[self.n_layers]["W_hy"] # H x O
+        b_y = self.layer_params[self.n_layers]["b_y"]
+
+
+        out_dim = W_hy.shape[1]
+        hidden_dim = W_hy.shape[0]
+        layer_output = torch.zeros(batch_size, seq_len, out_dim) # B x S x O
+        hidden_state = torch.zeros(batch_size, self.n_layers, hidden_dim)
+
+        # first deal with all inputs at time 0, going from bottom to top
+        # then time 1, etc..
+
+
+        for s in range(seq_len):
+
+            for layer in range(self.n_layers):
+
+
+                ### input x
+                ### ----------------
+                # for first layer the input is the real input, for next layers it is the output of the previous layer
+
+                if layer == 0:
+                    x_t = layer_input[:, s, :] # B x I
+                else:
+                    x_t = layer_states[layer - 1 ] # B x H
+                ### ----------------
+
+
+                ### input h
+                ### ----------------
+                if dropout:
+                    dropout_layer = self.layer_params[-1]
+                    h_t_m1 = dropout_layer(layer_states[layer]) # B x H
+                else:
+                    h_t_m1 = layer_states[layer] # B x H
+                ### ----------------
+
+                ### calculations
+                #
+                # print(x_t.shape)
+                # print(W_xz[layer].shape)
+                # print(torch.matmul(x_t, W_xz[layer]).shape)
+
+                # update gate
+                z_t = torch.matmul(x_t, W_xz[layer]) + torch.matmul(h_t_m1, W_hz[layer]) + b_z[layer] # B x H
+                torch.sigmoid_(z_t)
+
+                # reset gate
+                r_t = torch.matmul(x_t, W_xr[layer]) + torch.matmul(h_t_m1, W_hr[layer]) + b_r[layer]
+                torch.sigmoid_(r_t) # B x ? x H
+
+                g_t = torch.matmul(x_t, W_xg[layer]) + torch.matmul(torch.mul(r_t, h_t_m1), W_hg[layer]) + b_g[layer]
+                torch.tanh_(g_t)
+
+                layer_states[layer] = torch.mul(z_t, h_t_m1) + torch.mul((1-z_t), g_t) # B x H
+                #
+                # print(z_t.shape)
+                # print(r_t.shape)
+                # print(g_t.shape)
+
+                #  the outputs
+                if layer == self.n_layers - 1:
+                    # print(layer_states[layer].shape)
+                    # print(W_hy_stacked.shape)
+                    layer_output[:, s, :] = torch.matmul(layer_states[layer], W_hy) + b_y
+
+            # the final hidden states
+            if s == seq_len - 1:
+                for layer in range(self.n_layers):
+                    hidden_state[:, layer, :] = layer_states[layer]
+
+        # layer_states (L x B x H)
+        # layer_output (B, S, O)
+        # hidden_state (B, L, H)
+
         # ========================
         return layer_output, hidden_state
