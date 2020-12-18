@@ -221,7 +221,64 @@ class RNNTrainer(Trainer):
     def train_epoch(self, dl_train: DataLoader, **kw):
         # TODO: Implement modifications to the base method, if needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        """
+        Evaluates the given forward-function on batches from the given
+        dataloader, and prints progress along the way.
+        """
+        
+        self.model.train(True)
+        dl = dl_train
+        forward_fn = self.train_batch
+        
+        verbose=True
+        max_batches=None
+        
+        # nullify the hidden state between epochs
+        self.model.hidden_state = None
+            
+        
+        losses = []
+        num_correct = 0
+        num_samples = len(dl.sampler)
+        num_batches = len(dl.batch_sampler)
+
+        if max_batches is not None:
+            if max_batches < num_batches:
+                num_batches = max_batches
+                num_samples = num_batches * dl.batch_size
+
+        if verbose:
+            pbar_file = sys.stdout
+        else:
+            pbar_file = open(os.devnull, "w")
+
+        pbar_name = forward_fn.__name__
+        with torch.autograd.set_detect_anomaly(True):
+            with tqdm.tqdm(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
+                dl_iter = iter(dl)
+                for batch_idx in range(num_batches):
+                    data = next(dl_iter)
+
+
+                    batch_res = forward_fn(data)
+
+                    pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
+                    pbar.update()
+
+                    losses.append(batch_res.loss)
+                    num_correct += batch_res.num_correct
+
+                avg_loss = sum(losses) / num_batches
+                accuracy = 100.0 * num_correct / num_samples
+                pbar.set_description(
+                    f"{pbar_name} "
+                    f"(Avg. Loss {avg_loss:.3f}, "
+                    f"Accuracy {accuracy:.1f})"
+                )
+
+        return EpochResult(losses=losses, accuracy=accuracy)
+
         # ========================
         return super().train_epoch(dl_train, **kw)
 
@@ -246,7 +303,53 @@ class RNNTrainer(Trainer):
         #  - Update params
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # we have to pass the hidden state between batches while training
+        # this is why we make the batches aligned, so that sequences would influence next sequences
+
+        if hasattr(self, 'hidden_state'):
+            hidden_state = self.model.hidden_state
+        else:
+            hidden_state = None
+
+        B = x.shape[0]
+        S = seq_len
+        V = x.shape[2]
+        
+        # Forward pass
+        y_pred, self.hidden_state = self.model(input=x, hidden_state=hidden_state)
+        
+        # print(y.shape)         # torch.Size([1, 64])       
+        # print(y_pred.shape)    # torch.Size([1, 64, 78])
+
+        
+        # Compute loss
+        # loss function takes as input [NxC], where C - number of classes, N - number of samples and target of size [N]
+        # We have batch dimension. We have to reduce it
+        # loss = self.loss_fn(y_pred, y) # (B, S, V), (B, S)
+        
+        y_flat = y.contiguous().view(-1) # [BS]
+        y_pred_flat = y_pred.view(B*S, -1) # [BS x V]
+
+        loss = self.loss_fn(y_pred_flat, y_flat) # [BS x V], [BS]
+        
+        # Backward pass
+        self.optimizer.zero_grad()        
+        loss.backward(retain_graph=True)  # retain graph to save the hidden state gradients
+
+        # Optimization step
+        self.optimizer.step()
+
+        
+        # y (B,S)
+        # y_pred (B, S, V)
+        
+        y_pred_maxprob = y_pred.argmax(dim=2)
+
+        num_correct = torch.sum((y - y_pred_maxprob) == 0)
+
+        print("Done batch")
+
         # ========================
 
         # Note: scaling num_correct by seq_len because each sample has seq_len

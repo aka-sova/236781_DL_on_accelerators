@@ -243,7 +243,7 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
 
-    sampling_amount = 100 # what's the right number?..
+    sampling_amount = 1 # what's the right number?..
     new_sequence = []
 
     # encode the start sequence
