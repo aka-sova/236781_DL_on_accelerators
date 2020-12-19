@@ -103,6 +103,9 @@ and test accuracy increase.
 part3_q1 = r"""
 **Your answer:**
 
+The bottleneck block emploies  a 1x1 convolution before the 3x3 convolutional layer and after
+in order reduce dimension which decrease the number of feature maps whilst retaining their salient features.
+
 # of weights for residual block: 3 * 3* 64 * 64
 # of weights for bottleneck block: 1* 1 * 64 * 256
 
