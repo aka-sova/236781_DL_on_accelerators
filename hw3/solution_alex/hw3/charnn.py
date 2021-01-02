@@ -159,6 +159,10 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     N_idx_tensor = torch.arange(start = 0, end = N*S*V, step = S*V).view(N, 1, 1)
     S_idx_tensor = torch.arange(start = 0, end = V*S, step = V).view(1, S, 1)
     V_idx_tensor = torch.arange(V).view(1, 1, V)
+    
+    #     N_idx_tensor = N_idx_tensor.to(device)
+    #     S_idx_tensor = S_idx_tensor.to(device)
+    #     V_idx_tensor = V_idx_tensor.to(device)
 
     NSV_tensor = N_idx_tensor + S_idx_tensor + V_idx_tensor # [N x S x V]
     NSV_flat = NSV_tensor.view(-1)
@@ -199,13 +203,19 @@ def hot_softmax(y, dim=0, temperature=1.0):
     """
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
+    
+    # numerical stability
+    y = y - torch.max(y)
 
     y_exp = torch.exp(y/temperature)
+        
 
     softmax_sum = torch.sum(y_exp, dim=dim)
     softmax_sum = torch.unsqueeze(softmax_sum, dim=dim)
+    
     result = y_exp / softmax_sum
 
+    # result[y_exp.isinf()] = float('inf')
 
     # ========================
     return result
@@ -243,7 +253,6 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
 
-    sampling_amount = 1 # what's the right number?..
     new_sequence = []
 
     # encode the start sequence
@@ -253,6 +262,8 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
 
     # initial
     hidden_state = None
+    
+    input_dim = model.in_dim    
 
 
     with torch.no_grad():
@@ -261,26 +272,38 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
             # 1. feed the inputs
             y, h = model.forward(input = sequence_batch, hidden_state = hidden_state)
 
+            
             # 2. take the last output, turn into probabilities
-            scores = y[:, -1, :] # B x S x O   , we take last char
-            output_probs = hot_softmax(scores, temperature=T) # B x O
+            scores = y[0, -1, :] # B x S x O   , we take last char if numerous chars exist
+            
+            # print(scores.shape)
+            
+            output_probs = hot_softmax(scores, temperature=T, dim=0) # dim = O  (not zero)
+            
+            # take the most probable char
 
-            # 3. sample the output char from the probabilities
-            sampling_indixes = torch.multinomial(output_probs, sampling_amount, replacement=True)
+            # 3. sample the output char from the probabilities only for rows with no Infinity
+            sampled_index = torch.multinomial(output_probs, 1).item()               
+            
+            #             # if infinity probability present, take this char
+            #             if sum(output_probs.isinf()) > 0:
+            #                 sampled_index = torch.argmax(scores).item()  
+            #             else:
+            #                 # 3. sample the output char from the probabilities only for rows with no Infinity
+            #                 sampled_index = torch.multinomial(output_probs, 1).item()   
+                
+            chosen_char_str = idx_to_char[sampled_index]
+            
+            #             max_prob = torch.argmax(output_probs)
+            #             print(f"char : {chosen_char_str}, index : {max_prob}, prob: {output_probs[max_prob]}")            
 
-            # find the most sampled char from the probabilities
-            indixes, counts = sampling_indixes.unique(return_counts=True)
-            chosen_char_embedded = indixes[torch.argmax(counts)]
-            chosen_char_str = idx_to_char[chosen_char_embedded.item()]
+
             new_sequence.append(chosen_char_str)
 
-            # print(f"Chosen char: {chosen_char_str}")
-
-            # propagate the hidden state, change the sequence
+            # propagate the hidden state, change the sequence to the last output char
             hidden_state = h
-            # remove first char, place last char
-            sequence_batch = torch.roll(sequence_batch, -1, 1) # do -1 shift along dim of S.
-            sequence_batch[0, -1, :] =chosen_char_embedded
+            sequence_batch = torch.zeros(1, 1, input_dim)
+            sequence_batch[0,0,sampled_index] = 1
 
     out_text = start_sequence + "".join(new_sequence)
 
@@ -322,7 +345,7 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         dataset_size_cut = batches_num * self.batch_size
 
 
-        # move simple (but costly) way
+        # more simple (but costly) way
 
         # idx_list = [list(range(batch_num, dataset_size_cut + batches_num - (batches_num - batch_num + 1), batches_num))
         #             for batch_num in range(batches_num)]
@@ -404,7 +427,7 @@ class MultilayerGRU(nn.Module):
 
         # init the parameters with normal distribution, mean = 0, std = 0.1
         mean = 0
-        std = 0.1
+        std = 0.005
 
         for layer in range(n_layers+1):
 

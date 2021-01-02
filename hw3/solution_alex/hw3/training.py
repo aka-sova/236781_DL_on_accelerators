@@ -93,7 +93,33 @@ class Trainer(abc.ABC):
             #  - Implement early stopping. This is a very useful and
             #    simple regularization technique that is highly recommended.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            
+            # Training            
+            res = self.train_epoch(dl_train, **kw)
+            train_loss.append(torch.mean((torch.tensor(res.losses))).item())
+            train_acc.append(res.accuracy)
+            actual_num_epochs += 1
+
+            # Testing
+            res = self.test_epoch(dl_test, **kw)
+            test_loss.append(torch.mean((torch.tensor(res.losses))).item())
+
+            if epoch > 0:
+                # condition for accuracy improvement in epoch against past epochs
+                if res.accuracy < torch.max(torch.tensor(test_acc)).item():
+                    epochs_without_improvement += 1
+                    if checkpoints is not None:
+                        torch.save(self.model, checkpoints)
+                else:
+                    epochs_without_improvement=0
+
+                if early_stopping is not None:
+                    if epochs_without_improvement > early_stopping:
+                        print("Stopped early")
+                        save_checkpoint = True
+                        break
+
+            test_acc.append(res.accuracy)
             # ========================
 
             # Save model checkpoint if requested
@@ -231,9 +257,6 @@ class RNNTrainer(Trainer):
         dl = dl_train
         forward_fn = self.train_batch
         
-        verbose=True
-        max_batches=None
-        
         # nullify the hidden state between epochs
         self.model.hidden_state = None
             
@@ -243,39 +266,21 @@ class RNNTrainer(Trainer):
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
 
-        if max_batches is not None:
-            if max_batches < num_batches:
-                num_batches = max_batches
-                num_samples = num_batches * dl.batch_size
 
-        if verbose:
-            pbar_file = sys.stdout
-        else:
-            pbar_file = open(os.devnull, "w")
+        dl_iter = iter(dl)
+        for batch_idx in range(num_batches):
+#             print(f"batch_idx = {batch_idx}")
+            if batch_idx%1000 == 0 and batch_idx > 0:
+                print(f"\tbatch no {batch_idx}/{num_batches}")
+            data = next(dl_iter)
 
-        pbar_name = forward_fn.__name__
-        with torch.autograd.set_detect_anomaly(True):
-            with tqdm.tqdm(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
-                dl_iter = iter(dl)
-                for batch_idx in range(num_batches):
-                    data = next(dl_iter)
+            batch_res = forward_fn(data)
 
+            losses.append(batch_res.loss)
+            num_correct += batch_res.num_correct
 
-                    batch_res = forward_fn(data)
-
-                    pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
-                    pbar.update()
-
-                    losses.append(batch_res.loss)
-                    num_correct += batch_res.num_correct
-
-                avg_loss = sum(losses) / num_batches
-                accuracy = 100.0 * num_correct / num_samples
-                pbar.set_description(
-                    f"{pbar_name} "
-                    f"(Avg. Loss {avg_loss:.3f}, "
-                    f"Accuracy {accuracy:.1f})"
-                )
+        avg_loss = sum(losses) / num_batches
+        accuracy = 100.0 * num_correct / num_samples
 
         return EpochResult(losses=losses, accuracy=accuracy)
 
@@ -285,7 +290,40 @@ class RNNTrainer(Trainer):
     def test_epoch(self, dl_test: DataLoader, **kw):
         # TODO: Implement modifications to the base method, if needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        """
+        Evaluates the given forward-function on batches from the given
+        dataloader, and prints progress along the way.
+        """
+        
+        self.model.train(False)
+        dl = dl_test
+        forward_fn = self.test_batch
+
+        # nullify the hidden state between epochs
+        self.model.hidden_state = None
+            
+        
+        losses = []
+        num_correct = 0
+        num_samples = len(dl.sampler)
+        num_batches = len(dl.batch_sampler)
+
+
+        dl_iter = iter(dl)
+        for batch_idx in range(num_batches):
+
+            data = next(dl_iter)
+
+            batch_res = forward_fn(data)
+
+            losses.append(batch_res.loss)
+            num_correct += batch_res.num_correct
+
+        avg_loss = sum(losses) / num_batches
+        accuracy = 100.0 * num_correct / num_samples
+
+        return EpochResult(losses=losses, accuracy=accuracy)
         # ========================
         return super().test_epoch(dl_test, **kw)
 
@@ -307,7 +345,7 @@ class RNNTrainer(Trainer):
         # we have to pass the hidden state between batches while training
         # this is why we make the batches aligned, so that sequences would influence next sequences
 
-        if hasattr(self, 'hidden_state'):
+        if hasattr(self.model, 'hidden_state'):
             hidden_state = self.model.hidden_state
         else:
             hidden_state = None
@@ -315,10 +353,10 @@ class RNNTrainer(Trainer):
         B = x.shape[0]
         S = seq_len
         V = x.shape[2]
-        
+
         # Forward pass
-        y_pred, self.hidden_state = self.model(input=x, hidden_state=hidden_state)
-        
+        y_pred, new_hidden_state = self.model(input=x, hidden_state=hidden_state)
+
         # print(y.shape)         # torch.Size([1, 64])       
         # print(y_pred.shape)    # torch.Size([1, 64, 78])
 
@@ -328,6 +366,9 @@ class RNNTrainer(Trainer):
         # We have batch dimension. We have to reduce it
         # loss = self.loss_fn(y_pred, y) # (B, S, V), (B, S)
         
+        # y (B,S)
+        # y_pred (B, S, V)
+        
         y_flat = y.contiguous().view(-1) # [BS]
         y_pred_flat = y_pred.view(B*S, -1) # [BS x V]
 
@@ -335,20 +376,23 @@ class RNNTrainer(Trainer):
         
         # Backward pass
         self.optimizer.zero_grad()        
-        loss.backward(retain_graph=True)  # retain graph to save the hidden state gradients
+        
+        #         loss.backward(retain_graph=True)  # retain graph to save the hidden state gradients
+        
+        loss.backward()
+        
+        # detach the old hidden state before the new batch
+        new_hidden_state = new_hidden_state.detach()
+        self.model.hidden_state = new_hidden_state # [ 1 X num_layers X hidden_dims ]
 
         # Optimization step
         self.optimizer.step()
 
         
-        # y (B,S)
-        # y_pred (B, S, V)
-        
+    
         y_pred_maxprob = y_pred.argmax(dim=2)
 
         num_correct = torch.sum((y - y_pred_maxprob) == 0)
-
-        print("Done batch")
 
         # ========================
 
@@ -369,7 +413,21 @@ class RNNTrainer(Trainer):
             #  - Loss calculation
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+
+            if hasattr(self,model, 'hidden_state'):
+                hidden_state = self.model.hidden_state
+            else:
+                hidden_state = None  
+            
+            y_pred, self.hidden_state = self.model(input=x, hidden_state=hidden_state)     
+        
+            y_flat = y.contiguous().view(-1) # [BS]
+            y_pred_flat = y_pred.view(B*S, -1) # [BS x V]
+
+            loss = self.loss_fn(y_pred_flat, y_flat) # [BS x V], [BS]       
+    
+            y_pred_maxprob = y_pred.argmax(dim=2)
+            num_correct = torch.sum((y - y_pred_maxprob) == 0)            
             # ========================
 
         return BatchResult(loss.item(), num_correct.item() / seq_len)
