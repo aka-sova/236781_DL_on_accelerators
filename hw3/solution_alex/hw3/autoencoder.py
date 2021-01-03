@@ -170,7 +170,7 @@ class VAE(nn.Module):
         
         h = self.decode_MLP(z).reshape(-1, features_num, H, W ) # [B, 1024, 2, 2]
         
-        print(h.shape)
+        # print(h.shape)
         
         # h = self.decode_MLP(z).reshape(-1, self.hidden_ch, 2, 2)
         x_rec = self.features_decoder(h)
