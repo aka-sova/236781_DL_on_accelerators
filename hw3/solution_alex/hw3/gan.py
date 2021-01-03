@@ -1,9 +1,11 @@
+from typing import Callable
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Callable
-from torch.utils.data import DataLoader
+
 from torch.optim.optimizer import Optimizer
+from torch.utils.data import DataLoader
 
 
 class Discriminator(nn.Module):
@@ -19,7 +21,33 @@ class Discriminator(nn.Module):
         #  You can then use either an affine layer or another conv layer to
         #  flatten the features.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        modules = []
+        in_channels = in_size[0]
+        n = 64
+        # first layer
+        modules.append(nn.Conv2d(in_channels,out_channels=n,kernel_size=3,stride=1, padding=1))
+        modules.append(nn.BatchNorm2d(n))
+        modules.append(nn.MaxPool2d(2))
+        modules.append(nn.LeakyReLU())
+        # second layer
+        modules.append(nn.Conv2d(in_channels=n,out_channels=n*2,kernel_size=3,stride=1, padding=1))
+        modules.append(nn.BatchNorm2d(n*2))
+        modules.append(nn.MaxPool2d(4))
+        modules.append(nn.LeakyReLU())
+        # third layer
+        modules.append(nn.Conv2d(in_channels=n*2,out_channels=n*4,kernel_size=3,stride=1, padding=1))
+        modules.append(nn.BatchNorm2d(n*4))
+        modules.append(nn.MaxPool2d(8))
+        modules.append(nn.LeakyReLU())
+        # fourth layer
+        modules.append(nn.Conv2d(in_channels=n*4,out_channels=n*8,kernel_size=1))
+        modules.append(nn.LeakyReLU())
+        # output layer
+        modules.append(nn.Conv2d(in_channels=n*8,out_channels=1,kernel_size=1))
+        modules.append(nn.Sigmoid())
+
+        self.cnn = nn.Sequential(*modules)
+
         # ========================
 
     def forward(self, x):
@@ -32,9 +60,13 @@ class Discriminator(nn.Module):
         #  No need to apply sigmoid to obtain probability - we'll combine it
         #  with the loss due to improved numerical stability.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        y = self.cnn(x)
+        y = y.reshape(-1,1)
+
         # ========================
         return y
+
 
 
 class Generator(nn.Module):
@@ -48,15 +80,47 @@ class Generator(nn.Module):
         super().__init__()
         self.z_dim = z_dim
 
-        # TODO: Create the generator model layers.
+        # TODO: Create the generator model layers.b
         #  To combine image features you can use the DecoderCNN from the VAE
         #  section or implement something new.
         #  You can assume a fixed image size.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        modules = []
+        pDrop = 0.0
+        biases = True
+
+        # first layer
+        modules.append(nn.ConvTranspose2d(z_dim,256,4,stride = 2, padding = 1, output_padding=0, bias = biases))
+        modules.append(nn.BatchNorm2d(256))
+        modules.append(nn.Dropout2d(pDrop))
+        modules.append(nn.LeakyReLU())
+        # second layer
+        modules.append(nn.ConvTranspose2d(256,128,4,stride = 2, padding = 1, output_padding=0))
+        modules.append(nn.BatchNorm2d(128))
+        modules.append(nn.Dropout2d(pDrop))
+        modules.append(nn.LeakyReLU())
+        # third layer
+        modules.append(nn.ConvTranspose2d(128,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
+        modules.append(nn.BatchNorm2d(64))
+        modules.append(nn.LeakyReLU())
+        #
+        modules.append(nn.ConvTranspose2d(64,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
+        modules.append(nn.BatchNorm2d(64))
+        modules.append(nn.LeakyReLU())
+        #
+        modules.append(nn.ConvTranspose2d(64,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
+        modules.append(nn.BatchNorm2d(64))
+        modules.append(nn.LeakyReLU())
+        #
+        modules.append(nn.ConvTranspose2d(64,out_channels,4,stride = 2, padding = 1, output_padding=0, bias = False))
+        modules.append(nn.Tanh())
+
+
+        self.cnn = nn.Sequential(*modules)
+
         # ========================
 
-    def sample(self, n, with_grad=False):
+    def sample(self, n, with_grad = False):
         """
         Samples from the Generator.
         :param n: Number of instance-space samples to generate.
@@ -70,7 +134,15 @@ class Generator(nn.Module):
         #  Generate n latent space samples and return their reconstructions.
         #  Don't use a loop.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        
+        if with_grad:
+            z = torch.randn(n, self.z_dim, requires_grad = True).to(device)
+            samples = self.forward(z)
+        else:
+            with torch.no_grad():
+                z = torch.randn(n, self.z_dim).to(device)
+                samples = self.forward(z).cpu()
+
         # ========================
         return samples
 
@@ -84,10 +156,11 @@ class Generator(nn.Module):
         #  Don't forget to make sure the output instances have the same
         #  dynamic range as the original (real) images.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        z = z.reshape(z.shape[0], z.shape[1], 1, 1)
+        x = self.cnn(z)
+
         # ========================
         return x
-
 
 def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     """
@@ -109,7 +182,27 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     #  Implement the discriminator loss.
     #  See pytorch's BCEWithLogitsLoss for a numerically stable implementation.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+
+    crit = nn.BCEWithLogitsLoss()
+    rand_ = torch.rand_like(y_data)
+
+    data_label_rnd = rand_*label_noise-label_noise/2+data_label
+    
+    genr_label = 1-data_label
+    genr_label_rnd = torch.rand_like(y_data)*label_noise-label_noise/2+genr_label
+
+    loss_data = crit(y_data, data_label_rnd)
+    loss_generated = crit(y_generated, genr_label_rnd)
+
+    real_acc = abs(y_data).mean().item()-0.3
+    fake_acc = abs(y_generated).mean().item()
+    if real_acc>0.5:
+        if real_acc>fake_acc:
+            loss_data = loss_data*0
+            loss_generated = loss_generated*0
+
+
     # ========================
     return loss_data + loss_generated
 
@@ -130,20 +223,18 @@ def generator_loss_fn(y_generated, data_label=0):
     #  Think about what you need to compare the input to, in order to
     #  formulate the loss in terms of Binary Cross Entropy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    data_label_ = data_label*torch.ones_like(y_generated)
+    crit = nn.BCEWithLogitsLoss()
+    loss = crit(y_generated, data_label_)
+
     # ========================
     return loss
 
 
-def train_batch(
-    dsc_model: Discriminator,
-    gen_model: Generator,
-    dsc_loss_fn: Callable,
-    gen_loss_fn: Callable,
-    dsc_optimizer: Optimizer,
-    gen_optimizer: Optimizer,
-    x_data: DataLoader,
-):
+def train_batch(dsc_model: Discriminator, gen_model: Generator,
+                dsc_loss_fn: Callable, gen_loss_fn: Callable,
+                dsc_optimizer: Optimizer, gen_optimizer: Optimizer,
+                x_data: DataLoader):
     """
     Trains a GAN for over one batch, updating both the discriminator and
     generator.
@@ -179,7 +270,7 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     """
 
     saved = False
-    checkpoint_file = f"{checkpoint_file}.pt"
+    checkpoint_file = f'{checkpoint_file}.pt'
 
     # TODO:
     #  Save a checkpoint of the generator model. You can use torch.save().
@@ -187,6 +278,6 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     #  If you save, set saved to True.
     # ====== YOUR CODE: ======
     raise NotImplementedError()
-    # ========================
 
+    # ===========================
     return saved
