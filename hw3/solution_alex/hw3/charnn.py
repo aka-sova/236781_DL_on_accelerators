@@ -160,9 +160,6 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     S_idx_tensor = torch.arange(start = 0, end = V*S, step = V).view(1, S, 1)
     V_idx_tensor = torch.arange(V).view(1, 1, V)
     
-    #     N_idx_tensor = N_idx_tensor.to(device)
-    #     S_idx_tensor = S_idx_tensor.to(device)
-    #     V_idx_tensor = V_idx_tensor.to(device)
 
     NSV_tensor = N_idx_tensor + S_idx_tensor + V_idx_tensor # [N x S x V]
     NSV_flat = NSV_tensor.view(-1)
@@ -448,7 +445,7 @@ class MultilayerGRU(nn.Module):
                 self.layer_params[layer]["b_g"] = nn.Parameter(torch.Tensor(h_dim))
             else:
 
-                # register the output params
+                # output params
                 self.layer_params.append(layer)
                 self.layer_params[layer] = {}
                 self.layer_params[layer]["W_hy"] = nn.Parameter(torch.Tensor(h_dim, out_dim))
@@ -460,14 +457,21 @@ class MultilayerGRU(nn.Module):
                 torch.nn.init.normal_(self.layer_params[layer][param], mean=mean, std=std)
                 self.register_parameter(f"{param}_l_{layer}", self.layer_params[layer][param])
 
-
-
-
         if dropout > 0:
             self.layer_params.append(n_layers+1)
             self.layer_params[n_layers+1] = nn.Dropout(p=dropout)
-
+        
         # ========================
+        
+    def __str__(self):
+        
+        out_str = ""
+        for layer_idx in range(len(self.layer_params)):
+            out_str = out_str + f"\nLayer : {layer_idx}"
+            for mx_type in self.layer_params[layer_idx]:
+                out_str = out_str +  f"\n\tType : {mx_type}, size = {self.layer_params[layer_idx][mx_type].shape}"
+        return out_str
+            
 
     def forward(self, input: Tensor, hidden_state: Tensor = None):
         """
@@ -504,7 +508,9 @@ class MultilayerGRU(nn.Module):
         #  Tip: You can use torch.stack() to combine multiple tensors into a
         #  single tensor in a differentiable manner.
         # ====== YOUR CODE: ======
-
+        
+        
+        input = input.to(self.device)
 
         dropout = False
         if self.n_layers+2 == len(self.layer_params):
@@ -520,35 +526,12 @@ class MultilayerGRU(nn.Module):
         W_hg =  []
         b_g =   []
 
-        # for layer in range(self.n_layers):
-        #
-        #     # next hidden state of each previous time block
-        #     # is the input to the next time block as h_(t-1)
-        #
-        #     ### stack the weights
-        #     ### ----------------
-        #
-        #     W_xz.append(torch.stack([self.layer_params[layer]["W_xz"]] * batch_size))
-        #     W_hz.append(torch.stack([self.layer_params[layer]["W_hz"]] * batch_size))
-        #     b_z.append(torch.stack([self.layer_params[layer]["b_z"]] * batch_size))
-        #
-        #     W_xr.append(torch.stack([self.layer_params[layer]["W_xr"]] * batch_size))
-        #     W_hr.append(torch.stack([self.layer_params[layer]["W_hr"]] * batch_size))
-        #     b_r.append(torch.stack([self.layer_params[layer]["b_r"]] * batch_size))
-        #
-        #     W_xg.append(torch.stack([self.layer_params[layer]["W_xg"]] * batch_size))
-        #     W_hg.append(torch.stack([self.layer_params[layer]["W_hg"]] * batch_size))
-        #     b_g.append(torch.stack([self.layer_params[layer]["b_g"]] * batch_size))
-        #
-        # W_hy_stacked = torch.stack([self.layer_params[self.n_layers]["W_hy"]] * batch_size) # B x H x O
-        # b_y_stacked = torch.stack([self.layer_params[self.n_layers]["b_y"]] * batch_size)
-
         for layer in range(self.n_layers):
 
             # next hidden state of each previous time block
             # is the input to the next time block as h_(t-1)
 
-            ### stack the weights
+            ### i use it as 'aliases' to the layer params, to save space
             ### ----------------
 
             W_xz.append(self.layer_params[layer]["W_xz"])

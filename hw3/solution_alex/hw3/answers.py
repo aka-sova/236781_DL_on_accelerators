@@ -109,7 +109,7 @@ def part2_vae_hyperparams():
     hypers['z_dim'] = 2
     hypers['x_sigma2'] = 0.1
     hypers['learn_rate'] = 0.001
-    hypers['betas'] = (0.1, 0.1)
+    hypers['betas'] = (0.5, 0.5)
     
     # ========================
     return hypers
