@@ -182,8 +182,8 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     fixed_char_indixes = text_chars_tensor[NS_tensor_single_char[:, :, 0].view(-1)]
     labels = fixed_char_indixes.view(N, S)
 
-    samples.to(device)
-    labels.to(device)
+    samples = samples.to(device)
+    labels = labels.to(device)
 
     # ========================
     return samples, labels
@@ -256,9 +256,10 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     sequence = chars_to_onehot(start_sequence, char_to_idx) # num chars x embedding size
     sequence = sequence.to(dtype=torch.float)
     sequence_batch = torch.unsqueeze(sequence, dim = 0) # B x S x V
+    sequence_batch = sequence_batch.to(device)
 
     # initial
-    hidden_state = None
+    h = None
     
     input_dim = model.in_dim    
 
@@ -267,7 +268,7 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
         for char_num in range(n_chars - len(start_sequence)):
 
             # 1. feed the inputs
-            y, h = model.forward(input = sequence_batch, hidden_state = hidden_state)
+            y, h = model.forward(input = sequence_batch, hidden_state = h)
 
             
             # 2. take the last output, turn into probabilities
@@ -296,11 +297,16 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
 
 
             new_sequence.append(chosen_char_str)
+            # print(f"new_sequence = {new_sequence}")
 
             # propagate the hidden state, change the sequence to the last output char
-            hidden_state = h
-            sequence_batch = torch.zeros(1, 1, input_dim)
+            sequence_batch = torch.zeros(1, 1, input_dim)            
             sequence_batch[0,0,sampled_index] = 1
+            
+            sequence_batch = sequence_batch.to(device)
+
+            #             print(f"sequence_batch.device = {sequence_batch.device}")
+            #             print(f"hidden_state.device = {h.device}")
 
     out_text = start_sequence + "".join(new_sequence)
 
@@ -469,7 +475,7 @@ class MultilayerGRU(nn.Module):
         for layer_idx in range(len(self.layer_params)):
             out_str = out_str + f"\nLayer : {layer_idx}"
             for mx_type in self.layer_params[layer_idx]:
-                out_str = out_str +  f"\n\tType : {mx_type}, size = {self.layer_params[layer_idx][mx_type].shape}"
+                out_str = out_str +  f"\n\tType : {mx_type}, size = {self.layer_params[layer_idx][mx_type].shape}, device = {self.layer_params[layer_idx][mx_type].device}"
         return out_str
             
 
@@ -549,8 +555,8 @@ class MultilayerGRU(nn.Module):
 
         out_dim = W_hy.shape[1]
         hidden_dim = W_hy.shape[0]
-        layer_output = torch.zeros(batch_size, seq_len, out_dim) # B x S x O
-        hidden_state = torch.zeros(batch_size, self.n_layers, hidden_dim)
+        layer_output = torch.zeros(batch_size, seq_len, out_dim, device = input.device) # B x S x O
+        hidden_state = torch.zeros(batch_size, self.n_layers, hidden_dim, device = input.device)
 
         # first deal with all inputs at time 0, going from bottom to top
         # then time 1, etc..
@@ -586,6 +592,12 @@ class MultilayerGRU(nn.Module):
                 # print(x_t.shape)
                 # print(W_xz[layer].shape)
                 # print(torch.matmul(x_t, W_xz[layer]).shape)
+
+                #                 print(f"x_t.device = {x_t.device}")
+                #                 print(f"W_xz[layer].device = {W_xz[layer].device}")
+                #                 print(f"h_t_m1.device = {h_t_m1.device}")
+                #                 print(f"W_hz[layer].device = {W_hz[layer].device}")
+                #                 print(f"b_z[layer].device = {b_z[layer].device}")
 
                 # update gate
                 z_t = torch.matmul(x_t, W_xz[layer]) + torch.matmul(h_t_m1, W_hz[layer]) + b_z[layer] # B x H

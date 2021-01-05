@@ -22,7 +22,18 @@ def part1_rnn_hyperparams():
     )
     # TODO: Set the hyperparameters to train the model.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    
+    hypers["batch_size"] = 512
+    hypers["seq_len"] = 50
+    hypers["h_dim"] = 256
+    hypers["n_layers"] = 3 
+    hypers["dropout"] = 0.2
+    hypers["learn_rate"] = 0.01
+    hypers["lr_sched_factor"] = 0
+    hypers["lr_sched_patience"] = 0
+    
+    
+    
     # ========================
     return hypers
 
@@ -103,13 +114,22 @@ def part2_vae_hyperparams():
     )
     # TODO: Tweak the hyperparameters to generate a former president.
     # ====== YOUR CODE: ======
+
+    # those were quiet good
     
-    hypers['batch_size'] = 20
+    #     hypers['batch_size'] = 5
+    #     hypers['h_dim'] = 1000
+    #     hypers['z_dim'] = 10
+    #     hypers['x_sigma2'] = 0.002
+    #     hypers['learn_rate'] = 0.0002
+    #     hypers['betas'] = (0.99, 0.99)    
+
+    hypers['batch_size'] = 5
     hypers['h_dim'] = 1000
-    hypers['z_dim'] = 2
-    hypers['x_sigma2'] = 0.1
-    hypers['learn_rate'] = 0.001
-    hypers['betas'] = (0.5, 0.5)
+    hypers['z_dim'] = 30
+    hypers['x_sigma2'] = 0.0002
+    hypers['learn_rate'] = 0.0002
+    hypers['betas'] = (0.99, 0.99)
     
     # ========================
     return hypers

@@ -270,8 +270,8 @@ class RNNTrainer(Trainer):
         dl_iter = iter(dl)
         for batch_idx in range(num_batches):
 #             print(f"batch_idx = {batch_idx}")
-            if batch_idx%1000 == 0 and batch_idx > 0:
-                print(f"\tbatch no {batch_idx}/{num_batches}")
+#             if batch_idx%10 == 0 and batch_idx > 0:
+#                 print(f"\tbatch no {batch_idx}/{num_batches}")
             data = next(dl_iter)
 
             batch_res = forward_fn(data)
@@ -281,6 +281,8 @@ class RNNTrainer(Trainer):
 
         avg_loss = sum(losses) / num_batches
         accuracy = 100.0 * num_correct / num_samples
+        
+        print(f"(Avg. Loss {avg_loss:.3f} , Accuracy {accuracy:.1f})")
 
         return EpochResult(losses=losses, accuracy=accuracy)
 
@@ -413,8 +415,11 @@ class RNNTrainer(Trainer):
             #  - Loss calculation
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
+            
+            B = x.shape[0]
+            S = seq_len
 
-            if hasattr(self,model, 'hidden_state'):
+            if hasattr(self.model, 'hidden_state'):
                 hidden_state = self.model.hidden_state
             else:
                 hidden_state = None  
