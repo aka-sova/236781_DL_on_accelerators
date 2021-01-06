@@ -123,13 +123,15 @@ def part2_vae_hyperparams():
 part2_q1 = r"""
 **Your answer:**
 
+The sigma2 parameter is a regularization parameter between the 2 main loss components:
+1. The similarity component (reconstruction term) between the original image and the image after passing through the encoder-decoder network
+2. The DL component - or the similarity of the latent space probability distribution to the Normal distribution with mean of 0 and variance of 1 - makes the latent space regular
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+
+If it's high - the (1) term becomes less dominant, and the mappings become more random, and less resembling the actual original image. But it guarantees the latent space to be continuous (two close points in latent space give approximately same decoded image) and complete (it does give meaningful content).
+If it's low - less randomness is allowed in the decoder mapping from Z to X, the (1) is more dominant, and the latent space distibutions will be 
+    spreaded further away from each other, allowing less overlap. Then, the latent space will be less continuous and complete, not allowing us to generate new images easily. Sampling from latent space will create images with undesirable artifacts
+
 
 """
 
@@ -137,25 +139,27 @@ part2_q2 = r"""
 **Your answer:**
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+1. Explanation:
+- reconstruction term - how similar is the original image to the image after being processed through the VAE
+- KL divergence loss - The similarity of the latent space probability distribution to the Standard Normal distribution (mean = 0, std = 1)
+
+
+2. If the latent space distibution is not similar to the Standard Normal distribution, this loss will be high, and it will penalize those layers which create those distributions from the last output layer of the encoder network. 
+
+
+3. As explained in q.1, it guarantees completelness (it does give meaningful content for any point sampled in the latent space) and continuity (two close points in latent space give approximately same decoded image). By saying simply, the similar original images in the instance space should also be similar in the latent space. And there should be no 'gaps' between the distributions in the latent space.
 
 """
 
 part2_q3 = r"""
 **Your answer:**
 
+Our objective is first of all to maximize the probability of the training set.
+But the direct computation is infeasible. 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+But in the encoder part, 
+By constraining the posterior distribution $q_{\alpha} (Z|X)$ to be similar to the true posterios $P(Z|X)$, we reach the
+expression which allows us to express the lower bound for $P(X)$. By minimizing it, we minimize the evidence.
 
 """
 
