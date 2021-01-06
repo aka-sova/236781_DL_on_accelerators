@@ -108,8 +108,6 @@ class Trainer(abc.ABC):
                 # condition for accuracy improvement in epoch against past epochs
                 if test_result.accuracy < torch.max(torch.tensor(test_acc)).item():
                     epochs_without_improvement += 1
-                    if checkpoints is not None:
-                        torch.save(self.model, checkpoints)
                 else:
                     epochs_without_improvement=0
 
@@ -117,7 +115,6 @@ class Trainer(abc.ABC):
                     if epochs_without_improvement > early_stopping:
                         print("Stopped early")
                         save_checkpoint = True
-                        break
 
             test_acc.append(test_result.accuracy)
             # ========================
@@ -133,6 +130,7 @@ class Trainer(abc.ABC):
                 print(
                     f"*** Saved checkpoint {checkpoint_filename} " f"at epoch {epoch+1}"
                 )
+                break
 
             if post_epoch_fn:
                 post_epoch_fn(epoch, train_result, test_result, verbose)
@@ -211,10 +209,8 @@ class Trainer(abc.ABC):
                 num_batches = max_batches
                 num_samples = num_batches * dl.batch_size
 
-        if verbose:
-            pbar_file = sys.stdout
-        else:
-            pbar_file = open(os.devnull, "w")
+
+        pbar_file = sys.stdout
 
         pbar_name = forward_fn.__name__
         with tqdm.tqdm(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
@@ -258,31 +254,35 @@ class RNNTrainer(Trainer):
         forward_fn = self.train_batch
         
         # nullify the hidden state between epochs
-        self.model.hidden_state = None
-            
+        self.model.hidden_state = None            
         
         losses = []
         num_correct = 0
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
 
-
-        dl_iter = iter(dl)
-        for batch_idx in range(num_batches):
-#             print(f"batch_idx = {batch_idx}")
-#             if batch_idx%10 == 0 and batch_idx > 0:
-#                 print(f"\tbatch no {batch_idx}/{num_batches}")
-            data = next(dl_iter)
-
-            batch_res = forward_fn(data)
-
-            losses.append(batch_res.loss)
-            num_correct += batch_res.num_correct
-
-        avg_loss = sum(losses) / num_batches
-        accuracy = 100.0 * num_correct / num_samples
+        pbar_file = sys.stdout
+        pbar_name = forward_fn.__name__
         
-        print(f"(Avg. Loss {avg_loss:.3f} , Accuracy {accuracy:.1f})")
+        with tqdm.tqdm(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
+            dl_iter = iter(dl)
+            for batch_idx in range(num_batches):
+                data = next(dl_iter)
+                batch_res = forward_fn(data)
+
+                pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
+                pbar.update()
+
+                losses.append(batch_res.loss)
+                num_correct += batch_res.num_correct
+
+            avg_loss = sum(losses) / num_batches
+            accuracy = 100.0 * num_correct / num_samples
+            pbar.set_description(
+                f"{pbar_name} "
+                f"(Avg. Loss {avg_loss:.3f}, "
+                f"Accuracy {accuracy:.1f})"
+            )
 
         return EpochResult(losses=losses, accuracy=accuracy)
 
@@ -310,20 +310,30 @@ class RNNTrainer(Trainer):
         num_correct = 0
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
+        
+        
+        pbar_file = sys.stdout
+        pbar_name = forward_fn.__name__
+        
+        with tqdm.tqdm(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
+            dl_iter = iter(dl)
+            for batch_idx in range(num_batches):
+                data = next(dl_iter)
+                batch_res = forward_fn(data)
 
+                pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
+                pbar.update()
 
-        dl_iter = iter(dl)
-        for batch_idx in range(num_batches):
+                losses.append(batch_res.loss)
+                num_correct += batch_res.num_correct
 
-            data = next(dl_iter)
-
-            batch_res = forward_fn(data)
-
-            losses.append(batch_res.loss)
-            num_correct += batch_res.num_correct
-
-        avg_loss = sum(losses) / num_batches
-        accuracy = 100.0 * num_correct / num_samples
+            avg_loss = sum(losses) / num_batches
+            accuracy = 100.0 * num_correct / num_samples
+            pbar.set_description(
+                f"{pbar_name} "
+                f"(Avg. Loss {avg_loss:.3f}, "
+                f"Accuracy {accuracy:.1f})"
+            )
 
         return EpochResult(losses=losses, accuracy=accuracy)
         # ========================

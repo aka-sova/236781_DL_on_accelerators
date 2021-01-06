@@ -465,7 +465,8 @@ class MultilayerGRU(nn.Module):
 
         if dropout > 0:
             self.layer_params.append(n_layers+1)
-            self.layer_params[n_layers+1] = nn.Dropout(p=dropout)
+            self.layer_params[n_layers+1] = {}
+            self.layer_params[n_layers+1]["Dropout"] = nn.Dropout(p=dropout)
         
         # ========================
         
@@ -475,7 +476,13 @@ class MultilayerGRU(nn.Module):
         for layer_idx in range(len(self.layer_params)):
             out_str = out_str + f"\nLayer : {layer_idx}"
             for mx_type in self.layer_params[layer_idx]:
-                out_str = out_str +  f"\n\tType : {mx_type}, size = {self.layer_params[layer_idx][mx_type].shape}, device = {self.layer_params[layer_idx][mx_type].device}"
+                out_str = out_str +  f"\n\tType : {mx_type}"
+                
+                if hasattr(self.layer_params[layer_idx][mx_type], 'shape'):
+                    out_str = out_str +  f", size = {self.layer_params[layer_idx][mx_type].shape}"
+                    
+                if hasattr(self.layer_params[layer_idx][mx_type], 'device'):
+                    out_str = out_str +  f", device = {self.layer_params[layer_idx][mx_type].device}"
         return out_str
             
 
@@ -581,7 +588,7 @@ class MultilayerGRU(nn.Module):
                 ### input h
                 ### ----------------
                 if dropout:
-                    dropout_layer = self.layer_params[-1]
+                    dropout_layer = self.layer_params[-1]["Dropout"]
                     h_t_m1 = dropout_layer(layer_states[layer]) # B x H
                 else:
                     h_t_m1 = layer_states[layer] # B x H

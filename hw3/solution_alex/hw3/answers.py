@@ -23,14 +23,14 @@ def part1_rnn_hyperparams():
     # TODO: Set the hyperparameters to train the model.
     # ====== YOUR CODE: ======
     
-    hypers["batch_size"] = 512
+    hypers["batch_size"] = 128
     hypers["seq_len"] = 50
     hypers["h_dim"] = 256
-    hypers["n_layers"] = 3 
+    hypers["n_layers"] = 3
     hypers["dropout"] = 0.2
-    hypers["learn_rate"] = 0.01
-    hypers["lr_sched_factor"] = 0
-    hypers["lr_sched_patience"] = 0
+    hypers["learn_rate"] = 0.001
+    hypers["lr_sched_factor"] = 0.8
+    hypers["lr_sched_patience"] = 10
     
     
     
@@ -43,60 +43,51 @@ def part1_generation_params():
     temperature = 0.0001
     # TODO: Tweak the parameters to generate a literary masterpiece.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    start_seq = "ACT I. The rise of the machine:"
+    temperature = 0.5
     # ========================
     return start_seq, temperature
 
 
 part1_q1 = r"""
 **Your answer:**
+Several reasons:
 
+1. Training on the whole set physically doesn't let us to divice the training set into batches to parallelize the learning.
+2. The longer the sequence, the harder it is to train, since there are longer 'chains' of gradients. 
+    By saving the hidden state, and passing is on, we cut the 'gradient chains' (by using .detach operation)
+3. There is no need for such long chains because of the problem of vanishing and exploding gradients.
+4. Also thinking logically - the character at the beginning of a corpus will likely not have an effect on the character in the end of the corpus
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
 
 """
 
 part1_q2 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+When generating text, we generate a single character each time. But we save the hidden state and pass it on.
+This allows us to generate sequences of any length, and it has nothing to do with the sequence length. 
+The sequence length parameter only influenced the 'learning' part.
 
 """
 
 part1_q3 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+Because we deliberately ordered them in a specific way such that the batches sequences will continue the previous batches sequences.
+If we shuffle, there will be no connections between sequences in a specifix batch idx. 
 
 """
 
 part1_q4 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+1. At learning, we want the model to much more likely give the correct prediction, so we want to maximize the 'original' softmax value.
+    At generating sequence, we want want less randomness so that the generated context will be consisted of real words, and not some
+    unconnected characters which got sampled by chance. 
+2. when the temperature is high, the probabilities to sample the letters get "flattened", thus making our choice of the next character more random
+3. when the temperature is low, the probabilities get increased accoridng to their value, meaning the higher the probability, the more it will be increased. 
+    This means that the choices for the next letter will be less random, and it will tend to choose the character with highest probability even more.
 
 """
 # ==============
@@ -117,19 +108,13 @@ def part2_vae_hyperparams():
 
     # those were quiet good
     
-    #     hypers['batch_size'] = 5
-    #     hypers['h_dim'] = 1000
-    #     hypers['z_dim'] = 10
-    #     hypers['x_sigma2'] = 0.002
-    #     hypers['learn_rate'] = 0.0002
-    #     hypers['betas'] = (0.99, 0.99)    
-
     hypers['batch_size'] = 5
     hypers['h_dim'] = 1000
-    hypers['z_dim'] = 30
-    hypers['x_sigma2'] = 0.0002
+    hypers['z_dim'] = 10
+    hypers['x_sigma2'] = 0.002
     hypers['learn_rate'] = 0.0002
-    hypers['betas'] = (0.99, 0.99)
+    hypers['betas'] = (0.99, 0.99)    
+
     
     # ========================
     return hypers
