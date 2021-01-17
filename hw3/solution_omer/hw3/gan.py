@@ -25,26 +25,48 @@ class Discriminator(nn.Module):
         in_channels = in_size[0]
         n = 64
         # first layer
-        modules.append(nn.Conv2d(in_channels,out_channels=n,kernel_size=3,stride=1, padding=1))
+        # modules.append(nn.Conv2d(in_channels,out_channels=n,kernel_size=4,stride=2, padding=1,bias=False))
+        # modules.append(nn.LeakyReLU())
+        # # second layer
+        # modules.append(nn.Conv2d(in_channels=n,out_channels=n*2,kernel_size=4,stride=2, padding=1,bias=False))
+        # modules.append(nn.BatchNorm2d(n*2))
+        # modules.append(nn.LeakyReLU())
+        # # third layer
+        # modules.append(nn.Conv2d(in_channels=n*2,out_channels=n*4,kernel_size=4,stride=2, padding=1,bias=False))
+        # modules.append(nn.BatchNorm2d(n*4))
+        # modules.append(nn.LeakyReLU())
+        # # fourth layer
+        # modules.append(nn.Conv2d(in_channels=n*4,out_channels=n*8,kernel_size=4,stride=2,padding=1,bias=False))
+        # modules.append(nn.BatchNorm2d(n * 8))
+        # modules.append(nn.LeakyReLU())
+        # # output layer
+        # modules.append(nn.Conv2d(in_channels=n*8,out_channels=1,kernel_size=4,stride=1,padding=0,bias=False))
+        # modules.append(nn.Sigmoid())
+
+        # first layer
+        modules.append(nn.Conv2d(in_channels, out_channels=n, kernel_size=3, stride=1, padding=1,bias=False))
         modules.append(nn.BatchNorm2d(n))
         modules.append(nn.MaxPool2d(2))
         modules.append(nn.LeakyReLU())
         # second layer
-        modules.append(nn.Conv2d(in_channels=n,out_channels=n*2,kernel_size=3,stride=1, padding=1))
-        modules.append(nn.BatchNorm2d(n*2))
+        modules.append(nn.Conv2d(in_channels=n, out_channels=n * 2, kernel_size=3, stride=1, padding=1,bias=False))
+        modules.append(nn.BatchNorm2d(n * 2))
         modules.append(nn.MaxPool2d(4))
         modules.append(nn.LeakyReLU())
         # third layer
-        modules.append(nn.Conv2d(in_channels=n*2,out_channels=n*4,kernel_size=3,stride=1, padding=1))
-        modules.append(nn.BatchNorm2d(n*4))
+        modules.append(nn.Conv2d(in_channels=n * 2, out_channels=n * 4, kernel_size=3, stride=1, padding=1,bias=False))
+        modules.append(nn.BatchNorm2d(n * 4))
         modules.append(nn.MaxPool2d(8))
         modules.append(nn.LeakyReLU())
         # fourth layer
-        modules.append(nn.Conv2d(in_channels=n*4,out_channels=n*8,kernel_size=1))
+        modules.append(nn.Conv2d(in_channels=n * 4, out_channels=n * 8, kernel_size=1, stride=1, padding=1, bias=False))
+        modules.append(nn.BatchNorm2d(n * 8))
         modules.append(nn.LeakyReLU())
+
         # output layer
-        modules.append(nn.Conv2d(in_channels=n*8,out_channels=1,kernel_size=1))
+        modules.append(nn.Conv2d(in_channels=n * 8, out_channels=1, kernel_size=3, stride=1, padding=0,bias=False))
         modules.append(nn.Sigmoid())
+
 
         self.cnn = nn.Sequential(*modules)
 
@@ -86,35 +108,54 @@ class Generator(nn.Module):
         #  You can assume a fixed image size.
         # ====== YOUR CODE: ======
         modules = []
-        pDrop = 0.0
-        biases = True
+        n=64
+        # # first layer
+        # modules.append(nn.ConvTranspose2d(z_dim,n*8,4,stride = 1, padding = 0, bias=False))
+        # modules.append(nn.BatchNorm2d(n*8))
+        # modules.append(nn.LeakyReLU())
+        # # second layer
+        # modules.append(nn.ConvTranspose2d(n*8,n*4,4,stride = 2, padding = 1, bias=False))
+        # modules.append(nn.BatchNorm2d(n*4))
+        # modules.append(nn.LeakyReLU())
+        # # third layer
+        # modules.append(nn.ConvTranspose2d(n*4,n*2,4,stride = 2, padding = 1, bias = False))
+        # modules.append(nn.BatchNorm2d(n*2))
+        # modules.append(nn.LeakyReLU())
+        # # fourth layer
+        # modules.append(nn.ConvTranspose2d(n*2,n,4,stride = 2, padding = 1, output_padding=0, bias = False))
+        # modules.append(nn.BatchNorm2d(n))
+        # modules.append(nn.LeakyReLU())
+        # # output layer
+        # modules.append(nn.ConvTranspose2d(n,out_channels,4,stride = 2, padding = 1, bias = False))
+        # modules.append(nn.Tanh())
 
         # first layer
-        modules.append(nn.ConvTranspose2d(z_dim,256,4,stride = 2, padding = 1, output_padding=0, bias = biases))
-        modules.append(nn.BatchNorm2d(256))
-        modules.append(nn.Dropout2d(pDrop))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ConvTranspose2d(z_dim, n*8, 4, stride=2, padding=1, output_padding=0, bias=False))
+        modules.append(nn.BatchNorm2d(n*8))
+        modules.append(nn.Dropout2d(0.5))
+        modules.append(nn.ReLU())
         # second layer
-        modules.append(nn.ConvTranspose2d(256,128,4,stride = 2, padding = 1, output_padding=0))
-        modules.append(nn.BatchNorm2d(128))
-        modules.append(nn.Dropout2d(pDrop))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ConvTranspose2d(n*8, n*4, 4, stride=2, padding=1, output_padding=0,bias=False))
+        modules.append(nn.BatchNorm2d(n*4))
+        modules.append(nn.Dropout2d(0.5))
+        modules.append(nn.ReLU())
         # third layer
-        modules.append(nn.ConvTranspose2d(128,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
-        modules.append(nn.BatchNorm2d(64))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ConvTranspose2d(n*4,n*2, 4, stride=2, padding=1, output_padding=0, bias=False))
+        modules.append(nn.BatchNorm2d(n*2))
+        modules.append(nn.Dropout2d(0.5))
+        modules.append(nn.ReLU())
         #
-        modules.append(nn.ConvTranspose2d(64,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
-        modules.append(nn.BatchNorm2d(64))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ConvTranspose2d(n*2, n, 4, stride=2, padding=1, output_padding=0, bias=False))
+        modules.append(nn.BatchNorm2d(n))
+        modules.append(nn.Dropout2d(0.5))
+        modules.append(nn.ReLU())
         #
-        modules.append(nn.ConvTranspose2d(64,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
-        modules.append(nn.BatchNorm2d(64))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ConvTranspose2d(n, n, 4, stride=2, padding=1, output_padding=0, bias=False))
+        modules.append(nn.BatchNorm2d(n))
+        modules.append(nn.ReLU())
         #
-        modules.append(nn.ConvTranspose2d(64,out_channels,4,stride = 2, padding = 1, output_padding=0, bias = False))
+        modules.append(nn.ConvTranspose2d(n, out_channels, 4, stride=2, padding=1, output_padding=0, bias=False))
         modules.append(nn.Tanh())
-
 
         self.cnn = nn.Sequential(*modules)
 
@@ -141,7 +182,7 @@ class Generator(nn.Module):
         else:
             with torch.no_grad():
                 z = torch.randn(n, self.z_dim).to(device)
-                samples = self.forward(z).cpu()
+                samples = self.forward(z)
 
         # ========================
         return samples
@@ -182,20 +223,22 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     #  Implement the discriminator loss.
     #  See pytorch's BCEWithLogitsLoss for a numerically stable implementation.
     # ====== YOUR CODE: ======
+    # loss criterion
+    criterion = nn.BCEWithLogitsLoss()
 
-
-    crit = nn.BCEWithLogitsLoss()
+    # random numbers from a normal distribution with mean 0 and variance 1
     rand_ = torch.rand_like(y_data)
-
+    #Fuzzy labeling: [0-label_noise,0+label_noise] / [1-label_noise,1+label_noise]
     data_label_rnd = rand_*label_noise-label_noise/2+data_label
     
     genr_label = 1-data_label
+    # Fuzzy labeling: [0-label_noise,0+label_noise] / [1-label_noise,1+label_noise]
     genr_label_rnd = torch.rand_like(y_data)*label_noise-label_noise/2+genr_label
 
-    loss_data = crit(y_data, data_label_rnd)
-    loss_generated = crit(y_generated, genr_label_rnd)
+    loss_data = criterion(y_data, data_label_rnd)
+    loss_generated = criterion(y_generated, genr_label_rnd)
 
-    real_acc = abs(y_data).mean().item()-0.3
+    real_acc = abs(y_data).mean().item()-label_noise
     fake_acc = abs(y_generated).mean().item()
     if real_acc>0.5:
         if real_acc>fake_acc:
@@ -224,8 +267,8 @@ def generator_loss_fn(y_generated, data_label=0):
     #  formulate the loss in terms of Binary Cross Entropy.
     # ====== YOUR CODE: ======
     data_label_ = data_label*torch.ones_like(y_generated)
-    crit = nn.BCEWithLogitsLoss()
-    loss = crit(y_generated, data_label_)
+    criterion = nn.BCEWithLogitsLoss()
+    loss = criterion(y_generated, data_label_)
 
     # ========================
     return loss
@@ -246,7 +289,19 @@ def train_batch(dsc_model: Discriminator, gen_model: Generator,
     #  2. Calculate discriminator loss
     #  3. Update discriminator parameters
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    real_pred = dsc_model(x_data)
+
+    fake_data = gen_model.sample(x_data.shape[0], with_grad=True).to(x_data.device)
+    fake_pred = dsc_model(fake_data.detach())
+    fake_acc = abs(1 - fake_pred).sum().item() / len(fake_pred)
+
+    dsc_loss = dsc_loss_fn(real_pred, fake_pred)
+    real_acc = abs(real_pred).sum().item() / len(real_pred)
+
+    dsc_optimizer.zero_grad()
+    dsc_loss.backward()
+    dsc_optimizer.step()
+    #raise NotImplementedError()
     # ========================
 
     # TODO: Generator update
@@ -254,7 +309,20 @@ def train_batch(dsc_model: Discriminator, gen_model: Generator,
     #  2. Calculate generator loss
     #  3. Update generator parameters
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    reps = max(1, int(10 * (real_acc - fake_acc)))
+    for i in range(reps):
+        fake_data = gen_model.sample(x_data.shape[0], with_grad=True).to(x_data.device)
+        fake_pred = dsc_model(fake_data)
+
+        gen_loss = gen_loss_fn(fake_pred)
+        fake_acc = abs(fake_pred).sum().item() / len(fake_pred)
+
+        gen_optimizer.zero_grad()
+        gen_loss.backward(retain_graph=True)
+        gen_optimizer.step()
+
+    return fake_acc, real_acc
+    #raise NotImplementedError()
     # ========================
 
     return dsc_loss.item(), gen_loss.item()
@@ -277,7 +345,14 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     #  You should decide what logic to use for deciding when to save.
     #  If you save, set saved to True.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    if len(gen_losses) > 1:
+        temp1 = gen_losses[-1]-dsc_losses[-1]
+        temp2 = gen_losses[-2]-dsc_losses[-2]
+        if (temp1<temp2):
+            torch.save(gen_model, checkpoint_file)
+            saved = True
+    #raise NotImplementedError()
 
     # ===========================
     return saved
