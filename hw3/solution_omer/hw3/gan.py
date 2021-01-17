@@ -348,7 +348,7 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
 
     if len(gen_losses) > 1:
         temp1 = gen_losses[-1]-dsc_losses[-1]
-        temp2 = gen_losses[-2]-dsc_losses[-2]
+        temp2 = torch.mean(gen_losses-dsc_losses)
         if (temp1<temp2):
             torch.save(gen_model, checkpoint_file)
             saved = True
