@@ -345,10 +345,19 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     #  You should decide what logic to use for deciding when to save.
     #  If you save, set saved to True.
     # ====== YOUR CODE: ======
+    
+    import os
+    dirname = os.path.dirname("checkpoints/gan.pt")
+    os.makedirs(dirname, exist_ok=True)
 
     if len(gen_losses) > 1:
         temp1 = gen_losses[-1]-dsc_losses[-1]
-        temp2 = torch.mean(gen_losses-dsc_losses)
+        
+        gen_losses = torch.Tensor(gen_losses)
+        dsc_losses = torch.Tensor(dsc_losses)
+        
+        temp2 = torch.mean(gen_losses-dsc_losses).item()
+        
         if (temp1<temp2):
             torch.save(gen_model, checkpoint_file)
             saved = True
