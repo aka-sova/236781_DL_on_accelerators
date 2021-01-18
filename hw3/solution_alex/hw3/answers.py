@@ -166,13 +166,7 @@ expression which allows us to express the lower bound for $P(X)$. By minimizing 
 part2_q4 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The variance squared has to be a positive number. But simply connecting to the MLP will also output positive and negative numbers. So this is the way to make it positive while keeping it differentiable. 
 
 """
 
