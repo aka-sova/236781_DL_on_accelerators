@@ -39,7 +39,24 @@ class Episode(object):
         #  Try to implement it in O(n) runtime, where n is the number of
         #  states. Hint: change the order.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        
+        # reverse the list 
+        self.experiences.reverse()
+        
+        future_reward = 0
+        
+        for experience in self.experiences:
+            
+            reward = experience.reward + gamma * future_reward
+            future_reward = reward
+            
+            qvals.append(reward)
+        
+        
+        qvals.reverse()
+        # reverse the list back 
+        self.experiences.reverse()        
+        
         # ========================
         return qvals
 
@@ -88,7 +105,42 @@ class TrainBatch(object):
         #   - Calculate the q-values for states in each experience.
         #   - Construct a TrainBatch instance.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        
+        # init with some dummy value
+        
+        states = torch.empty(1,8)  
+        actions = []
+        q_vals = []
+        total_rewards = []
+        
+
+        
+        for episode in episodes:
+            episode_q_vals = episode.calc_qvals(gamma)
+            experience_reward = 0
+            
+
+            for experience, q_val in zip(episode.experiences, episode_q_vals):
+
+                #  experience.state is a tensor of size [8]. we need [1, 8]
+                states = torch.cat((states, experience.state.unsqueeze(dim=0)), dim=0)
+                actions.append(experience.action)
+                q_vals.append(q_val)
+                experience_reward += experience.reward
+                
+            total_rewards.append(experience_reward)
+                
+        
+        # print(states.shape)
+        
+        # states is already a torch tensor, remove dummy item
+        states = states[1:, :]
+        actions = torch.LongTensor(actions)
+        q_vals = torch.Tensor(q_vals)
+        total_rewards = torch.Tensor(total_rewards)
+        
+        train_batch = cls(states, actions, q_vals, total_rewards)
+
         # ========================
         return train_batch
 
@@ -147,7 +199,20 @@ class TrainBatchDataset(torch.utils.data.IterableDataset):
             #    by the agent.
             #  - Store Episodes in the curr_batch list.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+
+            is_done = False
+            total_reward = 0
+            experiences = []
+            
+            while not is_done:
+                experience = agent.step()
+                total_reward += experience.reward
+                is_done = experience.is_done     
+                experiences.append(experience)
+            
+            played_episode = Episode(total_reward, experiences)
+            curr_batch.append(played_episode)
+            
             # ========================
             if len(curr_batch) == self.episode_batch_size:
                 yield tuple(curr_batch)

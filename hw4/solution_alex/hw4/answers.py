@@ -17,7 +17,22 @@ def part1_pg_hyperparams():
     # TODO: Tweak the hyperparameters if needed.
     #  You can also add new ones if you need them for your model's __init__.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+ 
+    # 1. 
+    #     hp['batch_size'] = 32    
+    #     hp['gamma'] = 0.9
+    #     hp['beta'] = 0.1
+    #     hp['learn_rate'] = 1e-3    
+    #     hp['eps'] = 1e-8
+    #     hp['num_workers'] = 0    
+    
+    hp['batch_size'] = 32    
+    hp['gamma'] = 0.9
+    hp['beta'] = 0.05
+    hp['learn_rate'] = 1e-3    
+    hp['eps'] = 1e-8
+    hp['num_workers'] = 0    
+    
     # ========================
     return hp
 
@@ -35,7 +50,15 @@ def part1_aac_hyperparams():
     # TODO: Tweak the hyperparameters. You can also add new ones if you need
     #   them for your model implementation.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    
+    hp['batch_size'] = 32    
+    hp['gamma'] = 0.9
+    hp['beta'] = 0.05
+    hp['delta'] = 0.3
+    hp['learn_rate'] = 1e-3    
+    hp['eps'] = 1e-8
+    hp['num_workers'] = 0      
+    
     # ========================
     return hp
 
