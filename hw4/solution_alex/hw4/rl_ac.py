@@ -23,35 +23,53 @@ class AACPolicyNet(nn.Module):
         self.in_features = in_features
         self.out_actions = out_actions
         
-        # BACKBONE NET
-        backbone_features_list = [in_features, 100, 100, 100]
-        
-        backbone_layers = []
-        
-        for idx, _ in enumerate(backbone_features_list[:-1]):
-            backbone_layers.append(nn.Linear(backbone_features_list[idx], backbone_features_list[idx+1]))
-            
-            if idx < len(backbone_features_list)-1:
-                backbone_layers.append(nn.ReLU())
-                
-        backbone_net = nn.Sequential(*backbone_layers)
+        #         # BACKBONE NET
+        #         backbone_features_list = [in_features, 100]
+
+        #         backbone_layers = []
+        #         for idx, _ in enumerate(backbone_features_list[:-1]):
+        #             backbone_layers.append(nn.Linear(backbone_features_list[idx], backbone_features_list[idx+1]))
+
+        #             if idx < len(backbone_features_list)-1:
+        #                 backbone_layers.append(nn.ReLU())
+
+        #         backbone_net = nn.Sequential(*backbone_layers)
         
         # ACTIONS HEAD
-        action_layers = []         
-        action_layers.append(nn.Linear(backbone_features_list[-1], out_actions))        
-        actions_head = nn.Sequential(*action_layers)
-        actions_net = [backbone_net, actions_head]
+        action_layers = []        
+        # actions_features_list = [backbone_features_list[-1], 100, 100, out_actions]
+        actions_features_list = [in_features, 100, 100, 100, out_actions]
         
-        self.actions_net = nn.Sequential(*actions_net)
+        for idx, _ in enumerate(actions_features_list[:-1]):
+            action_layers.append(nn.Linear(actions_features_list[idx], actions_features_list[idx+1]))
+
+            if idx < len(actions_features_list)-2:
+                action_layers.append(nn.ReLU())
+       
+        actions_head = nn.Sequential(*action_layers)
+        
+        # actions_net = [backbone_net, actions_head]
+        
+        # self.actions_net = nn.Sequential(*actions_net)
+        self.actions_net = actions_head
         
         # VALUE HEAD
         
-        value_layers = []         
-        value_layers.append(nn.Linear(backbone_features_list[-1], 1))        
-        value_head = nn.Sequential(*value_layers)
-        value_net = [backbone_net, value_head]
+        value_layers = []
+        # values_features_list = [backbone_features_list[-1], 100, 100, 1]
+        values_features_list = [in_features, 600, 600, 600, 1]
         
-        self.value_net = nn.Sequential(*value_net)
+        for idx, _ in enumerate(values_features_list[:-1]):
+            value_layers.append(nn.Linear(values_features_list[idx], values_features_list[idx+1]))
+
+            if idx < len(values_features_list)-2:
+                value_layers.append(nn.ReLU())
+
+        value_head = nn.Sequential(*value_layers)
+        # value_net = [backbone_net, value_head]
+        
+        # self.value_net = nn.Sequential(*value_net)
+        self.value_net = value_head
         
         # ========================
 
@@ -132,7 +150,7 @@ class AACPolicyGradientLoss(VanillaPolicyGradientLoss):
         
         # policy loss for ACTOR
      
-        advantage = self._policy_weight(batch, state_values)  # NxN
+        advantage = self._policy_weight(batch, state_values)
         # print(advantage.shape)        
         
         

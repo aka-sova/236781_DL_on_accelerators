@@ -552,6 +552,8 @@ class PolicyTrainer(object):
             loss, loss_dict = loss_fnc(batch, action_scores)
             losses_dict.update(loss_dict)
             total_loss += loss
+            
+        # print(f"total_loss={total_loss}")
         
         #   - Backprop.
         total_loss.backward()
