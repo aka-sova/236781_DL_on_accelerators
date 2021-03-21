@@ -29,22 +29,22 @@ class Discriminator(nn.Module):
         n = 64
         # first layer
         modules.append(nn.Conv2d(in_channels,out_channels=n,kernel_size=3,stride=1, padding=1))
-        modules.append(nn.BatchNorm2d(n))
+        #modules.append(nn.BatchNorm2d(n))
         modules.append(nn.MaxPool2d(2))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # second layer
         modules.append(nn.Conv2d(in_channels=n,out_channels=n*2,kernel_size=3,stride=1, padding=1))
         modules.append(nn.BatchNorm2d(n*2))
         modules.append(nn.MaxPool2d(4))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # third layer
         modules.append(nn.Conv2d(in_channels=n*2,out_channels=n*4,kernel_size=3,stride=1, padding=1))
         modules.append(nn.BatchNorm2d(n*4))
         modules.append(nn.MaxPool2d(8))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # fourth layer
         modules.append(nn.Conv2d(in_channels=n*4,out_channels=n*8,kernel_size=1))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # output layer
         modules.append(nn.Conv2d(in_channels=n*8,out_channels=1,kernel_size=1))
         modules.append(nn.Sigmoid())
@@ -96,24 +96,24 @@ class Generator(nn.Module):
         modules.append(nn.ConvTranspose2d(z_dim,256,4,stride = 2, padding = 1, output_padding=0, bias = biases))
         modules.append(nn.BatchNorm2d(256))
         modules.append(nn.Dropout2d(pDrop))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.LeakyReLU(0.2))
         # second layer
         modules.append(nn.ConvTranspose2d(256,128,4,stride = 2, padding = 1, output_padding=0))
         modules.append(nn.BatchNorm2d(128))
         modules.append(nn.Dropout2d(pDrop))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.LeakyReLU(0.2))
         # third layer
         modules.append(nn.ConvTranspose2d(128,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
         modules.append(nn.BatchNorm2d(64))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.LeakyReLU(0.2))
         #
         modules.append(nn.ConvTranspose2d(64,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
         modules.append(nn.BatchNorm2d(64))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.LeakyReLU(0.2))
         #
         modules.append(nn.ConvTranspose2d(64,64,4,stride = 2, padding = 1, output_padding=0, bias = biases))
         modules.append(nn.BatchNorm2d(64))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.LeakyReLU(0.2))
         #
         modules.append(nn.ConvTranspose2d(64,out_channels,4,stride = 2, padding = 1, output_padding=0, bias = False))
         modules.append(nn.Tanh())
@@ -341,25 +341,26 @@ class Spectral_norm_Discriminator(nn.Module):
         modules = []
         in_channels = in_size[0]
         n = 64
-        "In each 2D convolution we preform spectral normalization"
+        "In each 2D convolution we preform spectral normalization, and no complimentary regularization techniques" \
+        "e.g. batch normalization, weight decay and reature matching"
         # first layer
         modules.append(spectral_norm(nn.Conv2d(in_channels,out_channels=n,kernel_size=3,stride=1, padding=1)))
-        modules.append(nn.BatchNorm2d(n))
+        #modules.append(nn.BatchNorm2d(n))
         modules.append(nn.MaxPool2d(2))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # second layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n,out_channels=n*2,kernel_size=3,stride=1, padding=1)))
-        modules.append(nn.BatchNorm2d(n*2))
+        #modules.append(nn.BatchNorm2d(n*2))
         modules.append(nn.MaxPool2d(4))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # third layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n*2,out_channels=n*4,kernel_size=3,stride=1, padding=1)))
-        modules.append(nn.BatchNorm2d(n*4))
+        #modules.append(nn.BatchNorm2d(n*4))
         modules.append(nn.MaxPool2d(8))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # fourth layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n*4,out_channels=n*8,kernel_size=1)))
-        modules.append(nn.LeakyReLU())
+        modules.append(nn.ReLU())
         # output layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n*8,out_channels=1,kernel_size=1)))
         modules.append(nn.Sigmoid())
