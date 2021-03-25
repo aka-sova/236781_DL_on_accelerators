@@ -9,6 +9,7 @@ from torch.nn.utils import spectral_norm
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
+import SNConvolution2D as SNC2D
 
 
 class Discriminator(nn.Module):
@@ -89,7 +90,7 @@ class Generator(nn.Module):
         #  You can assume a fixed image size.
         # ====== YOUR CODE: ======
         modules = []
-        pDrop = 0.0
+        pDrop = 0.5
         biases = True
 
         # first layer
@@ -325,7 +326,7 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     # ===========================
     return saved
 
-class Spectral_norm_Discriminator(nn.Module):
+class SN_Discriminator(nn.Module):
     def __init__(self, in_size):
         """
         :param in_size: The size of on input image (without batch dimension).
@@ -341,26 +342,32 @@ class Spectral_norm_Discriminator(nn.Module):
         modules = []
         in_channels = in_size[0]
         n = 64
-        "In each 2D convolution we preform spectral normalization, and no complimentary regularization techniques" \
-        "e.g. batch normalization, weight decay and reature matching"
+        """
+        The following discriminator 2D convolution is normalized by spectral normalization.
+        Spectral normalization is implemented by Pytorch 
+        MaxPooling2D is replaced with AvgPooling2D
+        """
         # first layer
         modules.append(spectral_norm(nn.Conv2d(in_channels,out_channels=n,kernel_size=3,stride=1, padding=1)))
         #modules.append(nn.BatchNorm2d(n))
-        modules.append(nn.MaxPool2d(2))
-        modules.append(nn.ReLU())
+        modules.append(nn.AvgPool2d(2))
+        #modules.append(nn.MaxPool2d(2))
+        modules.append(nn.LeakyReLU())
         # second layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n,out_channels=n*2,kernel_size=3,stride=1, padding=1)))
         #modules.append(nn.BatchNorm2d(n*2))
-        modules.append(nn.MaxPool2d(4))
-        modules.append(nn.ReLU())
+        modules.append(nn.AvgPool2d(4))
+        #modules.append(nn.MaxPool2d(4))
+        modules.append(nn.LeakyReLU())
         # third layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n*2,out_channels=n*4,kernel_size=3,stride=1, padding=1)))
         #modules.append(nn.BatchNorm2d(n*4))
-        modules.append(nn.MaxPool2d(8))
-        modules.append(nn.ReLU())
+        modules.append(nn.AvgPool2d(8))
+        #modules.append(nn.MaxPool2d(8))
+        modules.append(nn.LeakyReLU())
         # fourth layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n*4,out_channels=n*8,kernel_size=1)))
-        modules.append(nn.ReLU())
+        modules.append(nn.LeakyReLU())
         # output layer
         modules.append(spectral_norm(nn.Conv2d(in_channels=n*8,out_channels=1,kernel_size=1)))
         modules.append(nn.Sigmoid())
@@ -386,52 +393,169 @@ class Spectral_norm_Discriminator(nn.Module):
         # ========================
         return y
 
-def Wasserstein_train_batch(dsc_model: Discriminator, gen_model: Generator,
-                dsc_optimizer: Optimizer, gen_optimizer: Optimizer,
-                x_data: DataLoader,n_critic):
+
+def Wdsc_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     """
-        Trains a Wasserstein GAN for over one batch, updating the discriminator more times than the generator.
-        n_critic: the ratio training between the discriminator and the generator
-        dsc_optimizer, gen_optimizer : torch.optim.RMSprop(gen.parameters(), lr=lr)
-        :return: The discriminator and generator losses.
-        """
-    batches_done = 0
-    for i, (imgs, _) in enumerate(x_data):
 
-        # Configure input
-        real_imgs = Variable(imgs.type(torch.FloatTensor))
+    """
+    assert data_label == 1 or data_label == 0
+    # TODO:
+    #  Implement the discriminator loss.
+    #  See pytorch's BCEWithLogitsLoss for a numerically stable implementation.
+    # ====== YOUR CODE: ======
+    rand_ = torch.rand_like(y_data)
 
-        "Train Discriminator"
+    data_label_rnd = rand_ * label_noise - label_noise / 2 + data_label
+
+    genr_label = 1 - data_label
+    genr_label_rnd = torch.rand_like(y_data) * label_noise - label_noise / 2 + genr_label
+
+    loss_D = -torch.mean(y_data) + torch.mean(y_generated)
+
+    # loss_data = crit(y_data, data_label_rnd)
+    # loss_generated = crit(y_generated, genr_label_rnd)
+
+    # real_acc = abs(y_data).mean().item() - 0.3
+    # fake_acc = abs(y_generated).mean().item()
+    # if real_acc > 0.5:
+    #     if real_acc > fake_acc:
+    #         loss_data = loss_data * 0
+    #         loss_generated = loss_generated * 0
+
+    # ========================
+    return loss_D
+
+
+def Wgen_loss_fn(y_generated, data_label=0):
+    """
+    Computes the loss of the generator given generated data using a
+    binary cross-entropy metric.
+    This is the loss used to update the Generator parameters.
+    :param y_generated: Discriminator class-scores of instances of data
+    generated by the generator, shape (N,).
+    :param data_label: 0 or 1, label of instances coming from the real dataset.
+    :return: The generator loss.
+    """
+    assert data_label == 1 or data_label == 0
+    # TODO:
+    #  Implement the Generator loss.
+    #  Think about what you need to compare the input to, in order to
+    #  formulate the loss in terms of Binary Cross Entropy.
+    # ====== YOUR CODE: ======
+    loss_G = -torch.mean(y_generated)
+    # data_label_ = data_label * torch.ones_like(y_generated)
+    # crit = nn.BCEWithLogitsLoss()
+    # loss = crit(y_generated, data_label_)
+
+    # ========================
+    return loss_G
+
+
+
+def Wasserstein_train_batch(dsc_model: Discriminator, gen_model: Generator,
+                dsc_loss_fn: Callable, gen_loss_fn: Callable,
+                dsc_optimizer: Optimizer, gen_optimizer: Optimizer,
+                x_data: DataLoader,n_critic:int):
+    """
+
+    """
+
+    # TODO: Discriminator update
+    #  1. Show the discriminator real and generated data
+    #  2. Calculate discriminator loss
+    #  3. Update discriminator parameters
+    # ====== YOUR CODE: ======
+    "Tranning Discriminator n_critic times more than Generator "
+    for i in range(n_critic):
+        real_pred = dsc_model(x_data)
+
+        fake_data = gen_model.sample(x_data.shape[0], with_grad=True).to(x_data.device)
+        fake_pred = dsc_model(fake_data.detach())
+        fake_acc = abs(1 - fake_pred).sum().item() / len(fake_pred)
+
+        dsc_loss = dsc_loss_fn(real_pred, fake_pred)
+        real_acc = abs(real_pred).sum().item() / len(real_pred)
 
         dsc_optimizer.zero_grad()
-
-        # Sample noise as generator input
-        z = Variable(torch.FloatTensor(np.random.normal(0, 1, (imgs.shape[0], 100))))
-
-        # Generate a batch of images
-        fake_imgs = gen_model(z).detach()
-        # Adversarial loss
-        loss_D = -torch.mean(dsc_model(real_imgs)) + torch.mean(dsc_model(fake_imgs))
-
-        loss_D.backward()
+        dsc_loss.backward()
         dsc_optimizer.step()
-
         # Clip weights of discriminator
         for p in dsc_model.parameters():
             p.data.clamp_(-0.01, 0.01)
+    # raise NotImplementedError()
+    # ========================
 
-        # Train the generator every n_critic iterations
-        if i % n_critic == 0:
+    # TODO: Generator update
+    #  1. Show the discriminator generated data
+    #  2. Calculate generator loss
+    #  3. Update generator parameters
+    # ====== YOUR CODE: ======
+    reps = max(1, int(10 * (real_acc - fake_acc)))
+    for i in range(reps):
+        fake_data = gen_model.sample(x_data.shape[0], with_grad=True).to(x_data.device)
+        fake_pred = dsc_model(fake_data)
 
-            "Train Generator"
+        gen_loss = gen_loss_fn(fake_pred)
+        fake_acc = abs(fake_pred).sum().item() / len(fake_pred)
 
-            gen_optimizer.zero_grad()
-            # Generate a batch of images
-            gen_imgs = gen_model(z)
-            # Adversarial loss
-            loss_G = -torch.mean(dsc_model(gen_imgs))
-            loss_G.backward()
-            gen_optimizer.step()
-        batches_done += 1
+        gen_optimizer.zero_grad()
+        gen_loss.backward(retain_graph=True)
+        gen_optimizer.step()
 
-    return loss_D.item(),loss_G.item()
+    return fake_acc, real_acc
+    # raise NotImplementedError()
+    # ========================
+
+    return dsc_loss.item(), gen_loss.item()
+
+
+
+# def Wasserstein_train_batch(dsc_model: Discriminator, gen_model: Generator,
+#                 dsc_optimizer: Optimizer, gen_optimizer: Optimizer,
+#                 x_data: DataLoader,n_critic):
+#     """
+#         Trains a Wasserstein GAN for over one batch, updating the discriminator more times than the generator.
+#         n_critic: the ratio training between the discriminator and the generator
+#         dsc_optimizer, gen_optimizer : torch.optim.RMSprop(gen.parameters(), lr=lr)
+#         :return: The discriminator and generator losses.
+#         """
+#     batches_done = 0
+#     for i, (imgs, _) in enumerate(x_data):
+#
+#         # Configure input
+#         real_imgs = Variable(imgs.type(torch.FloatTensor))
+#
+#         "Train Discriminator"
+#
+#         dsc_optimizer.zero_grad()
+#
+#         # Sample noise as generator input
+#         z = Variable(torch.FloatTensor(np.random.normal(0, 1, (imgs.shape[0], 100))))
+#
+#         # Generate a batch of images
+#         fake_imgs = gen_model(z).detach()
+#         # Adversarial loss
+#         loss_D = -torch.mean(dsc_model(real_imgs)) + torch.mean(dsc_model(fake_imgs))
+#
+#         loss_D.backward()
+#         dsc_optimizer.step()
+#
+#         # Clip weights of discriminator
+#         for p in dsc_model.parameters():
+#             p.data.clamp_(-0.01, 0.01)
+#
+#         # Train the generator every n_critic iterations
+#         if i % n_critic == 0:
+#
+#             "Train Generator"
+#
+#             gen_optimizer.zero_grad()
+#             # Generate a batch of images
+#             gen_imgs = gen_model(z)
+#             # Adversarial loss
+#             loss_G = -torch.mean(dsc_model(gen_imgs))
+#             loss_G.backward()
+#             gen_optimizer.step()
+#         batches_done += 1
+#
+#     return loss_D.item(),loss_G.item()
