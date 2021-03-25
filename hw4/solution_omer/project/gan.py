@@ -9,7 +9,6 @@ from torch.nn.utils import spectral_norm
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-import SNConvolution2D as SNC2D
 
 
 class Discriminator(nn.Module):
@@ -468,11 +467,10 @@ def Wasserstein_train_batch(dsc_model: Discriminator, gen_model: Generator,
     #  2. Calculate discriminator loss
     #  3. Update discriminator parameters
     # ====== YOUR CODE: ======
-    "Tranning Discriminator n_critic times more than Generator "
-    for i in range(n_critic):
-        real_pred = dsc_model(x_data)
+    for i, (imgs, _) in enumerate(x_data):
+        real_pred = dsc_model(imgs)
 
-        fake_data = gen_model.sample(x_data.shape[0], with_grad=True).to(x_data.device)
+        fake_data = gen_model.sample(imgs.shape[0], with_grad=True).to(imgs.device)
         fake_pred = dsc_model(fake_data.detach())
         fake_acc = abs(1 - fake_pred).sum().item() / len(fake_pred)
 
@@ -493,17 +491,18 @@ def Wasserstein_train_batch(dsc_model: Discriminator, gen_model: Generator,
     #  2. Calculate generator loss
     #  3. Update generator parameters
     # ====== YOUR CODE: ======
-    reps = max(1, int(10 * (real_acc - fake_acc)))
-    for i in range(reps):
-        fake_data = gen_model.sample(x_data.shape[0], with_grad=True).to(x_data.device)
-        fake_pred = dsc_model(fake_data)
+        if i % n_critic == 0:
+            reps = max(1, int(10 * (real_acc - fake_acc)))
+            for i in range(reps):
+                fake_data = gen_model.sample(imgs.shape[0], with_grad=True).to(imgs.device)
+                fake_pred = dsc_model(fake_data)
 
-        gen_loss = gen_loss_fn(fake_pred)
-        fake_acc = abs(fake_pred).sum().item() / len(fake_pred)
+                gen_loss = gen_loss_fn(fake_pred)
+                fake_acc = abs(fake_pred).sum().item() / len(fake_pred)
 
-        gen_optimizer.zero_grad()
-        gen_loss.backward(retain_graph=True)
-        gen_optimizer.step()
+                gen_optimizer.zero_grad()
+                gen_loss.backward(retain_graph=True)
+                gen_optimizer.step()
 
     return fake_acc, real_acc
     # raise NotImplementedError()
