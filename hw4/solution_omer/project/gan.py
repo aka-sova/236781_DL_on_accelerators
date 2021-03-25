@@ -457,7 +457,10 @@ def Wasserstein_train_batch(dsc_model: Discriminator, gen_model: Generator,
                 dsc_optimizer: Optimizer, gen_optimizer: Optimizer,
                 x_data: DataLoader,n_critic:int):
     """
-
+    The following training batch trains the Discriminator n_critic times more than the Generator
+    Discriminator and Generator should be torch.optim.RMSprop(gen.parameters(), lr=lr)
+    Discriminator loss should be -torch.mean(y_data) + torch.mean(y_generated)
+    Generator loss shoild be -torch.mean(y_generated)
     """
 
     # TODO: Discriminator update
