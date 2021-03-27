@@ -51,11 +51,20 @@ def part1_aac_hyperparams():
     #   them for your model implementation.
     # ====== YOUR CODE: ======
     
-    hp['batch_size'] = 32    
-    hp['gamma'] = 0.9
-    hp['beta'] = 0.05
-    hp['delta'] = 0.1
-    hp['learn_rate'] = 1e-3
+    
+#     hp['batch_size'] = 1   
+#     hp['gamma'] = 0.999
+#     hp['beta'] = 0.05    # multiply the loss_e
+#     hp['delta'] = 0.02   # multiply the loss_v
+#     hp['learn_rate'] = 0.00003
+#     hp['eps'] = 1e-8
+#     hp['num_workers'] = 0    
+    
+    hp['batch_size'] = 1   
+    hp['gamma'] = 0.999
+    hp['beta'] = 0.1    # multiply the loss_e
+    hp['delta'] = 0.04   # multiply the loss_v
+    hp['learn_rate'] = 0.00004
     hp['eps'] = 1e-8
     hp['num_workers'] = 0      
     

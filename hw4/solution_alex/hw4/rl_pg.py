@@ -393,6 +393,8 @@ class ActionEntropyLoss(nn.Module):
         # 5. We want to minimize loss, but maximize entropy
         loss_e *= -1        
         
+        # loss_e = 0  means the agent does the same action (entropy is 0)
+        
         # ========================
 
         loss_e *= self.beta
