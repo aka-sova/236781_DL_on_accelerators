@@ -62,9 +62,9 @@ def part1_aac_hyperparams():
     
     hp['batch_size'] = 1   
     hp['gamma'] = 0.999
-    hp['beta'] = 0.1    # multiply the loss_e
+    hp['beta'] = 0.3    # multiply the loss_e
     hp['delta'] = 0.04   # multiply the loss_v
-    hp['learn_rate'] = 0.00004
+    hp['learn_rate'] = 0.00003
     hp['eps'] = 1e-8
     hp['num_workers'] = 0      
     
@@ -130,16 +130,26 @@ negative, so does the loss_p.
 
 - From our experience, the CPG had a better performance over many times and had almost succeeded to reach the surface of the moon.
 
-2. The AAC training was much more complex. Some of the important things we did to calibrate it:
+2. The AAC training was much more complex and unstable. Only after precise calibration we were able to train it.
+Some of the important things we did to calibrate it:
 
 - Adjust the delta, so that the loss of the Critic will be of the same scale as the loss of the policy.
-- Adjust the beta, so that the "randomality" of the actions will be controlled
+- Adjust the beta, so that the "randomality" of the actions will be controlled.
 - Finding the appropriating network for Actor and Critic. In the end it was decided to use separate networks for each, not the 2-head network as proposed.
+- adjust the batch size and learning rate. Surprizingly, what worked for us was batch size of 1 and really small learning rate.
+
+
 
 By looking at the graphs, we can see that:
-- We were able to reach bigger rewards earlier
-- The policy loss was able to reach the 0 benchmark much earlier
+- The training is more stable, and can reach higher total return, but requires more tuning.
 - On average, we received higher max award.
-- In general, the learning is more stable. 
+
+
+Difficulties that were met:
+1. For big learning rate, and batch size, the loss_p and loss_e values would reach zero at some point. At this point, not further learning was taking place,
+and those losses would not recover. By looking at the videos we would observe that the agent would do the same actions all over (thus the entropy would be zero). 
+This is seen by as as kind of dead loop which we tried to avoid by adjusting the hyperparameters.
+2. After reaching some maximum performance, further training could sometimes deteriorate the performance. So it is important to stop in time
+
 
 """
